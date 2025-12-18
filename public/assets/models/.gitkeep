@@ -1,0 +1,14 @@
+# Place your GLTF/GLB model files in this directory
+
+# Supported formats:
+# - .glb (Binary GLTF)
+# - .gltf (GLTF JSON)
+
+# Example models you can download for free:
+# - https://github.com/KhronosGroup/glTF-Sample-Models
+# - https://sketchfab.com/
+# - https://poly.pizza/
+
+# After adding models, update components/editor/ModelLibrary.tsx
+# to include them in the availableModels array.
+
