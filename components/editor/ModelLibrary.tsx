@@ -5,6 +5,7 @@ import { addObject } from '@/lib/store/editorSlice';
 import { generateObjectId } from '@/lib/utils/sceneHelpers';
 import { SceneObject } from '@/types/editor.types';
 import { useState, useEffect } from 'react';
+import LazyModelThumbnail from './LazyModelThumbnail';
 
 interface ModelLibraryProps {
   isCollapsed: boolean;
@@ -96,18 +97,23 @@ export default function ModelLibrary({ isCollapsed, onToggleCollapse }: ModelLib
             </code>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             {models.map((model) => {
               const modelName = model.split('/').pop()?.replace('.glb', '').replace('.gltf', '') || 'Model';
               return (
                 <button
                   key={model}
                   onClick={() => addModelToScene(model)}
-                  className="w-full p-3 bg-zinc-700 hover:bg-zinc-600 rounded text-sm text-left transition-colors flex items-center gap-2"
+                  className="group bg-zinc-700 hover:bg-zinc-600 rounded transition-colors flex flex-col overflow-hidden"
                   title={modelName}
                 >
-                  <span className="text-lg">🏠</span>
-                  <span className="flex-1 truncate">{modelName}</span>
+                  <div className="w-full aspect-square relative">
+                    <LazyModelThumbnail modelPath={model} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  </div>
+                  <div className="p-2 text-xs text-zinc-300 truncate text-center">
+                    {modelName}
+                  </div>
                 </button>
               );
             })}

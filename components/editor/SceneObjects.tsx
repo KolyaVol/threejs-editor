@@ -19,7 +19,12 @@ if (typeof window !== 'undefined') {
   });
 }
 
-function SceneObject({ object }: { object: any }) {
+interface SceneObjectProps {
+  object: any;
+  onRightClick?: () => void;
+}
+
+function SceneObject({ object, onRightClick }: SceneObjectProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const isSelected = selectedObjectId === object.id;
@@ -27,6 +32,15 @@ function SceneObject({ object }: { object: any }) {
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     dispatch(selectObject(object.id));
+  };
+
+  const handleRightClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    e.nativeEvent.preventDefault();
+    dispatch(selectObject(object.id));
+    if (onRightClick) {
+      onRightClick();
+    }
   };
 
   // Create material
@@ -86,6 +100,7 @@ function SceneObject({ object }: { object: any }) {
           scale={object.scale}
           visible={object.visible}
           onClick={handleClick}
+          onContextMenu={handleRightClick}
         />
       );
     } catch (error) {
@@ -145,6 +160,7 @@ function SceneObject({ object }: { object: any }) {
       scale={object.scale}
       visible={object.visible}
       onClick={handleClick}
+      onContextMenu={handleRightClick}
       castShadow
       receiveShadow
     >
@@ -171,7 +187,11 @@ function SceneObject({ object }: { object: any }) {
   );
 }
 
-export default function SceneObjects() {
+interface SceneObjectsProps {
+  onRightClickObject?: () => void;
+}
+
+export default function SceneObjects({ onRightClickObject }: SceneObjectsProps) {
   const objects = useAppSelector((state) => state.editor.objects);
   const dispatch = useAppDispatch();
 
@@ -179,10 +199,16 @@ export default function SceneObjects() {
     dispatch(selectObject(null));
   };
 
+  const handleCanvasRightClick = (e: any) => {
+    e.stopPropagation();
+    // Prevent browser context menu on canvas
+    e.nativeEvent?.preventDefault();
+  };
+
   return (
-    <group onClick={handleCanvasClick}>
+    <group onClick={handleCanvasClick} onContextMenu={handleCanvasRightClick}>
       {objects.map((object) => (
-        <SceneObject key={object.id} object={object} />
+        <SceneObject key={object.id} object={object} onRightClick={onRightClickObject} />
       ))}
     </group>
   );

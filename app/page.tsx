@@ -27,6 +27,16 @@ export default function EditorPage() {
   const [materialsCollapsed, setMaterialsCollapsed] = useState(false);
   const [modelsCollapsed, setModelsCollapsed] = useState(false);
 
+  // Listen for right-click on object to open properties
+  useEffect(() => {
+    const handleOpenProperties = () => {
+      setPropertiesCollapsed(false);
+    };
+
+    window.addEventListener('openProperties', handleOpenProperties);
+    return () => window.removeEventListener('openProperties', handleOpenProperties);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

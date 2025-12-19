@@ -13,7 +13,10 @@ export default function EditorCanvas() {
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
 
   return (
-    <div className="w-full h-full bg-zinc-900">
+    <div 
+      className="w-full h-full bg-zinc-900"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <ErrorBoundary>
         <Suspense fallback={<LoadingSpinner />}>
           <Canvas
@@ -45,8 +48,11 @@ export default function EditorCanvas() {
               infiniteGrid
             />
 
-            {/* Scene Objects */}
-            <SceneObjects />
+        {/* Scene Objects */}
+        <SceneObjects onRightClickObject={() => {
+          // This will be handled by parent component
+          window.dispatchEvent(new CustomEvent('openProperties'));
+        }} />
 
             {/* Transform Controls for selected object */}
             {selectedObjectId && <TransformControlsWrapper />}
