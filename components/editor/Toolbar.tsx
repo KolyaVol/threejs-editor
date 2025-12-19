@@ -8,6 +8,7 @@ import { useState } from 'react';
 
 interface ToolbarProps {
   onExport: () => void;
+  onOpenSettings: () => void;
   hierarchyCollapsed: boolean;
   propertiesCollapsed: boolean;
   materialsCollapsed: boolean;
@@ -19,7 +20,8 @@ interface ToolbarProps {
 }
 
 export default function Toolbar({ 
-  onExport, 
+  onExport,
+  onOpenSettings,
   hierarchyCollapsed,
   propertiesCollapsed,
   materialsCollapsed,
@@ -37,6 +39,9 @@ export default function Toolbar({
   const [showPrimitiveMenu, setShowPrimitiveMenu] = useState(false);
   const [showLightMenu, setShowLightMenu] = useState(false);
   const [showCollapsedPanelsMenu, setShowCollapsedPanelsMenu] = useState(false);
+  const [primitiveMenuPos, setPrimitiveMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [lightMenuPos, setLightMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [panelsMenuPos, setPanelsMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   // Count collapsed panels
   const collapsedPanels = [
@@ -118,7 +123,7 @@ export default function Toolbar({
   };
 
   return (
-    <div className="h-14 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2 overflow-x-auto">
+    <div className="h-14 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2 overflow-x-auto relative z-50">
       {/* Collapsed Panel Buttons - Individual on large screens, dropdown on small */}
       {hasCollapsedPanels && (
         <>
@@ -169,20 +174,32 @@ export default function Toolbar({
           {/* Dropdown menu - visible on small screens */}
           <div className="relative lg:hidden">
             <button
-              onClick={() => setShowCollapsedPanelsMenu(!showCollapsedPanelsMenu)}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                if (!showCollapsedPanelsMenu) {
+                  setPanelsMenuPos({ top: rect.bottom + 4, left: rect.left });
+                }
+                setShowCollapsedPanelsMenu(!showCollapsedPanelsMenu);
+              }}
               className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
               title="Collapsed Panels"
             >
               <span>📋</span>
               <span>Panels ({collapsedPanels.length})</span>
             </button>
-            {showCollapsedPanelsMenu && (
+            {showCollapsedPanelsMenu && panelsMenuPos && (
               <>
                 <div 
-                  className="fixed inset-0 z-10"
+                  className="fixed inset-0 z-40"
                   onClick={() => setShowCollapsedPanelsMenu(false)}
                 />
-                <div className="absolute top-full mt-1 left-0 bg-zinc-700 rounded shadow-lg py-1 z-20 min-w-[180px]">
+                <div 
+                  className="fixed bg-zinc-700 rounded shadow-lg py-1 z-50 min-w-[180px]"
+                  style={{
+                    top: `${panelsMenuPos.top}px`,
+                    left: `${panelsMenuPos.left}px`
+                  }}
+                >
                   {collapsedPanels.map((panel) => (
                     <button
                       key={panel.name}
@@ -208,14 +225,31 @@ export default function Toolbar({
       {/* Add Primitive Dropdown */}
       <div className="relative">
         <button
-          onClick={() => setShowPrimitiveMenu(!showPrimitiveMenu)}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (!showPrimitiveMenu) {
+              setPrimitiveMenuPos({ top: rect.bottom + 4, left: rect.left });
+            }
+            setShowPrimitiveMenu(!showPrimitiveMenu);
+          }}
           className="px-2 md:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors whitespace-nowrap"
         >
           <span className="hidden sm:inline">+ Add Shape</span>
           <span className="sm:hidden">+ Shape</span>
         </button>
-        {showPrimitiveMenu && (
-          <div className="absolute top-full mt-1 left-0 bg-zinc-700 rounded shadow-lg py-1 z-10 min-w-[140px]">
+        {showPrimitiveMenu && primitiveMenuPos && (
+          <>
+            <div 
+              className="fixed inset-0 z-40"
+              onClick={() => setShowPrimitiveMenu(false)}
+            />
+            <div 
+              className="fixed bg-zinc-700 rounded shadow-lg py-1 z-50 min-w-[140px]"
+              style={{
+                top: `${primitiveMenuPos.top}px`,
+                left: `${primitiveMenuPos.left}px`
+              }}
+            >
             <button onClick={() => addPrimitive('box')} className="block w-full text-left px-4 py-2 hover:bg-zinc-600 text-sm">
               Box
             </button>
@@ -234,21 +268,39 @@ export default function Toolbar({
             <button onClick={() => addPrimitive('plane')} className="block w-full text-left px-4 py-2 hover:bg-zinc-600 text-sm">
               Plane
             </button>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
       {/* Add Light Dropdown */}
       <div className="relative">
         <button
-          onClick={() => setShowLightMenu(!showLightMenu)}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (!showLightMenu) {
+              setLightMenuPos({ top: rect.bottom + 4, left: rect.left });
+            }
+            setShowLightMenu(!showLightMenu);
+          }}
           className="px-2 md:px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 rounded text-sm font-medium transition-colors whitespace-nowrap"
         >
           <span className="hidden sm:inline">+ Add Light</span>
           <span className="sm:hidden">+ Light</span>
         </button>
-        {showLightMenu && (
-          <div className="absolute top-full mt-1 left-0 bg-zinc-700 rounded shadow-lg py-1 z-10 min-w-[160px]">
+        {showLightMenu && lightMenuPos && (
+          <>
+            <div 
+              className="fixed inset-0 z-40"
+              onClick={() => setShowLightMenu(false)}
+            />
+            <div 
+              className="fixed bg-zinc-700 rounded shadow-lg py-1 z-50 min-w-[160px]"
+              style={{
+                top: `${lightMenuPos.top}px`,
+                left: `${lightMenuPos.left}px`
+              }}
+            >
             <button onClick={() => addLight('ambientLight')} className="block w-full text-left px-4 py-2 hover:bg-zinc-600 text-sm">
               Ambient Light
             </button>
@@ -261,7 +313,8 @@ export default function Toolbar({
             <button onClick={() => addLight('spotLight')} className="block w-full text-left px-4 py-2 hover:bg-zinc-600 text-sm">
               Spot Light
             </button>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -337,6 +390,16 @@ export default function Toolbar({
       </button>
 
       <div className="flex-1 min-w-4" />
+
+      {/* Settings Button */}
+      <button
+        onClick={onOpenSettings}
+        className="px-2 md:px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm font-medium transition-colors whitespace-nowrap"
+        title="Settings"
+      >
+        <span className="hidden sm:inline">⚙️ Settings</span>
+        <span className="sm:hidden">⚙️</span>
+      </button>
 
       {/* Export and Clear */}
       <button

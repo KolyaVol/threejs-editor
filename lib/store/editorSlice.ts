@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { EditorState, SceneObject, TransformMode } from '@/types/editor.types';
+import { EditorState, SceneObject, TransformMode, EditorSettings } from '@/types/editor.types';
 
 const initialState: EditorState = {
   objects: [],
@@ -9,6 +9,10 @@ const initialState: EditorState = {
   historyIndex: 0,
   cameraPosition: [5, 5, 5],
   cameraTarget: [0, 0, 0],
+  settings: {
+    snapToGrid: true,
+    snapSize: 0.5,
+  },
 };
 
 const MAX_HISTORY = 50;
@@ -132,6 +136,10 @@ const editorSlice = createSlice({
       state.history = [[]];
       state.historyIndex = 0;
     },
+    
+    updateSettings: (state, action: PayloadAction<Partial<EditorSettings>>) => {
+      state.settings = { ...state.settings, ...action.payload };
+    },
   },
 });
 
@@ -148,6 +156,7 @@ export const {
   setCameraPosition,
   setCameraTarget,
   clearScene,
+  updateSettings,
 } = editorSlice.actions;
 
 export default editorSlice.reducer;

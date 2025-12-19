@@ -6,11 +6,17 @@ import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { updateObject, updateObjectWithHistory } from '@/lib/store/editorSlice';
 import * as THREE from 'three';
 
+// Helper function to snap value to grid
+const snapToGrid = (value: number, snapSize: number): number => {
+  return Math.round(value / snapSize) * snapSize;
+};
+
 export default function TransformControlsWrapper() {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const transformMode = useAppSelector((state) => state.editor.transformMode);
   const objects = useAppSelector((state) => state.editor.objects);
+  const settings = useAppSelector((state) => state.editor.settings);
   const transformRef = useRef<any>(null);
 
   const selectedObject = objects.find(obj => obj.id === selectedObjectId);
@@ -23,11 +29,22 @@ export default function TransformControlsWrapper() {
     const handleChange = () => {
       if (!controls.object) return;
 
-      const position: [number, number, number] = [
+      let position: [number, number, number] = [
         controls.object.position.x,
         controls.object.position.y,
         controls.object.position.z,
       ];
+
+      // Apply snap to grid for position if enabled and in translate mode
+      if (settings.snapToGrid && transformMode === 'translate') {
+        position = [
+          snapToGrid(position[0], settings.snapSize),
+          snapToGrid(position[1], settings.snapSize),
+          snapToGrid(position[2], settings.snapSize),
+        ];
+        // Update the control's position to reflect snapping
+        controls.object.position.set(position[0], position[1], position[2]);
+      }
 
       const rotation: [number, number, number] = [
         controls.object.rotation.x,
@@ -51,11 +68,22 @@ export default function TransformControlsWrapper() {
     const handleMouseUp = () => {
       if (!controls.object) return;
 
-      const position: [number, number, number] = [
+      let position: [number, number, number] = [
         controls.object.position.x,
         controls.object.position.y,
         controls.object.position.z,
       ];
+
+      // Apply snap to grid for position if enabled and in translate mode
+      if (settings.snapToGrid && transformMode === 'translate') {
+        position = [
+          snapToGrid(position[0], settings.snapSize),
+          snapToGrid(position[1], settings.snapSize),
+          snapToGrid(position[2], settings.snapSize),
+        ];
+        // Update the control's position to reflect snapping
+        controls.object.position.set(position[0], position[1], position[2]);
+      }
 
       const rotation: [number, number, number] = [
         controls.object.rotation.x,
@@ -83,7 +111,7 @@ export default function TransformControlsWrapper() {
       controls.removeEventListener('change', handleChange);
       controls.removeEventListener('mouseUp', handleMouseUp);
     };
-  }, [selectedObjectId, dispatch]);
+  }, [selectedObjectId, dispatch, settings, transformMode]);
 
   if (!selectedObject) return null;
 

@@ -10,12 +10,14 @@ import MaterialLibrary from '@/components/editor/MaterialLibrary';
 import ModelLibrary from '@/components/editor/ModelLibrary';
 import Toolbar from '@/components/editor/Toolbar';
 import ExportModal from '@/components/editor/ExportModal';
+import SettingsPanel from '@/components/editor/SettingsPanel';
 
 export default function EditorPage() {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
   
@@ -73,6 +75,7 @@ export default function EditorPage() {
       {/* Toolbar */}
       <Toolbar 
         onExport={() => setShowExportModal(true)}
+        onOpenSettings={() => setShowSettings(true)}
         hierarchyCollapsed={hierarchyCollapsed}
         propertiesCollapsed={propertiesCollapsed}
         materialsCollapsed={materialsCollapsed}
@@ -155,6 +158,9 @@ export default function EditorPage() {
           </button>
         </div>
       </div>
+
+      {/* Settings Panel */}
+      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
 
       {/* Export Modal */}
       <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />

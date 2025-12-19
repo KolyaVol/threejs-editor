@@ -32,6 +32,11 @@ export interface SceneObject {
   geometryArgs?: number[];
 }
 
+export interface EditorSettings {
+  snapToGrid: boolean;
+  snapSize: number;
+}
+
 export interface EditorState {
   objects: SceneObject[];
   selectedObjectId: string | null;
@@ -40,6 +45,7 @@ export interface EditorState {
   historyIndex: number;
   cameraPosition: [number, number, number];
   cameraTarget: [number, number, number];
+  settings: EditorSettings;
 }
 
 export interface MaterialPreset {
