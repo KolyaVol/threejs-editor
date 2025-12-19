@@ -36,6 +36,17 @@ export default function Toolbar({
   const historyLength = useAppSelector((state) => state.editor.history.length);
   const [showPrimitiveMenu, setShowPrimitiveMenu] = useState(false);
   const [showLightMenu, setShowLightMenu] = useState(false);
+  const [showCollapsedPanelsMenu, setShowCollapsedPanelsMenu] = useState(false);
+
+  // Count collapsed panels
+  const collapsedPanels = [
+    { collapsed: hierarchyCollapsed, name: 'Hierarchy', icon: '☰', onExpand: onExpandHierarchy },
+    { collapsed: propertiesCollapsed, name: 'Properties', icon: '⚙', onExpand: onExpandProperties },
+    { collapsed: materialsCollapsed, name: 'Materials', icon: '🎨', onExpand: onExpandMaterials },
+    { collapsed: modelsCollapsed, name: 'Models', icon: '🏠', onExpand: onExpandModels },
+  ].filter(panel => panel.collapsed);
+
+  const hasCollapsedPanels = collapsedPanels.length > 0;
 
   const addPrimitive = (type: 'box' | 'sphere' | 'cylinder' | 'plane' | 'torus' | 'cone') => {
     const geometryArgsMap = {
@@ -107,60 +118,101 @@ export default function Toolbar({
   };
 
   return (
-    <div className="h-14 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2">
-      {/* Collapsed Panel Buttons */}
-      {hierarchyCollapsed && (
-        <button
-          onClick={onExpandHierarchy}
-          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
-          title="Expand Scene Hierarchy"
-        >
-          <span>☰</span>
-          <span>Hierarchy</span>
-        </button>
-      )}
-      {propertiesCollapsed && (
-        <button
-          onClick={onExpandProperties}
-          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
-          title="Expand Properties"
-        >
-          <span>⚙</span>
-          <span>Properties</span>
-        </button>
-      )}
-      {materialsCollapsed && (
-        <button
-          onClick={onExpandMaterials}
-          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
-          title="Expand Materials"
-        >
-          <span>🎨</span>
-          <span>Materials</span>
-        </button>
-      )}
-      {modelsCollapsed && (
-        <button
-          onClick={onExpandModels}
-          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
-          title="Expand Models"
-        >
-          <span>🏠</span>
-          <span>Models</span>
-        </button>
-      )}
-      
-      {(hierarchyCollapsed || propertiesCollapsed || materialsCollapsed || modelsCollapsed) && (
-        <div className="w-px h-8 bg-zinc-600 mx-1" />
+    <div className="h-14 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2 overflow-x-auto">
+      {/* Collapsed Panel Buttons - Individual on large screens, dropdown on small */}
+      {hasCollapsedPanels && (
+        <>
+          {/* Individual buttons - hidden on small screens */}
+          <div className="hidden lg:flex items-center gap-2">
+            {hierarchyCollapsed && (
+              <button
+                onClick={onExpandHierarchy}
+                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                title="Expand Scene Hierarchy"
+              >
+                <span>☰</span>
+                <span>Hierarchy</span>
+              </button>
+            )}
+            {propertiesCollapsed && (
+              <button
+                onClick={onExpandProperties}
+                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                title="Expand Properties"
+              >
+                <span>⚙</span>
+                <span>Properties</span>
+              </button>
+            )}
+            {materialsCollapsed && (
+              <button
+                onClick={onExpandMaterials}
+                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                title="Expand Materials"
+              >
+                <span>🎨</span>
+                <span>Materials</span>
+              </button>
+            )}
+            {modelsCollapsed && (
+              <button
+                onClick={onExpandModels}
+                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                title="Expand Models"
+              >
+                <span>🏠</span>
+                <span>Models</span>
+              </button>
+            )}
+          </div>
+
+          {/* Dropdown menu - visible on small screens */}
+          <div className="relative lg:hidden">
+            <button
+              onClick={() => setShowCollapsedPanelsMenu(!showCollapsedPanelsMenu)}
+              className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+              title="Collapsed Panels"
+            >
+              <span>📋</span>
+              <span>Panels ({collapsedPanels.length})</span>
+            </button>
+            {showCollapsedPanelsMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowCollapsedPanelsMenu(false)}
+                />
+                <div className="absolute top-full mt-1 left-0 bg-zinc-700 rounded shadow-lg py-1 z-20 min-w-[180px]">
+                  {collapsedPanels.map((panel) => (
+                    <button
+                      key={panel.name}
+                      onClick={() => {
+                        panel.onExpand();
+                        setShowCollapsedPanelsMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 hover:bg-zinc-600 text-sm flex items-center gap-2"
+                    >
+                      <span>{panel.icon}</span>
+                      <span>{panel.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="w-px h-8 bg-zinc-600 mx-1" />
+        </>
       )}
 
       {/* Add Primitive Dropdown */}
       <div className="relative">
         <button
           onClick={() => setShowPrimitiveMenu(!showPrimitiveMenu)}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors"
+          className="px-2 md:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors whitespace-nowrap"
         >
-          + Add Shape
+          <span className="hidden sm:inline">+ Add Shape</span>
+          <span className="sm:hidden">+ Shape</span>
         </button>
         {showPrimitiveMenu && (
           <div className="absolute top-full mt-1 left-0 bg-zinc-700 rounded shadow-lg py-1 z-10 min-w-[140px]">
@@ -190,9 +242,10 @@ export default function Toolbar({
       <div className="relative">
         <button
           onClick={() => setShowLightMenu(!showLightMenu)}
-          className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 rounded text-sm font-medium transition-colors"
+          className="px-2 md:px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 rounded text-sm font-medium transition-colors whitespace-nowrap"
         >
-          + Add Light
+          <span className="hidden sm:inline">+ Add Light</span>
+          <span className="sm:hidden">+ Light</span>
         </button>
         {showLightMenu && (
           <div className="absolute top-full mt-1 left-0 bg-zinc-700 rounded shadow-lg py-1 z-10 min-w-[160px]">
@@ -218,30 +271,33 @@ export default function Toolbar({
       <div className="flex gap-1">
         <button
           onClick={() => dispatch(setTransformMode('translate'))}
-          className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+          className={`px-2 md:px-3 py-1.5 rounded text-sm font-medium transition-colors whitespace-nowrap ${
             transformMode === 'translate' ? 'bg-blue-600' : 'bg-zinc-700 hover:bg-zinc-600'
           }`}
           title="Translate (Move)"
         >
-          Move
+          <span className="hidden sm:inline">Move</span>
+          <span className="sm:hidden">M</span>
         </button>
         <button
           onClick={() => dispatch(setTransformMode('rotate'))}
-          className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+          className={`px-2 md:px-3 py-1.5 rounded text-sm font-medium transition-colors whitespace-nowrap ${
             transformMode === 'rotate' ? 'bg-blue-600' : 'bg-zinc-700 hover:bg-zinc-600'
           }`}
           title="Rotate"
         >
-          Rotate
+          <span className="hidden sm:inline">Rotate</span>
+          <span className="sm:hidden">R</span>
         </button>
         <button
           onClick={() => dispatch(setTransformMode('scale'))}
-          className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+          className={`px-2 md:px-3 py-1.5 rounded text-sm font-medium transition-colors whitespace-nowrap ${
             transformMode === 'scale' ? 'bg-blue-600' : 'bg-zinc-700 hover:bg-zinc-600'
           }`}
           title="Scale"
         >
-          Scale
+          <span className="hidden sm:inline">Scale</span>
+          <span className="sm:hidden">S</span>
         </button>
       </div>
 
@@ -251,10 +307,11 @@ export default function Toolbar({
       <button
         onClick={handleDelete}
         disabled={!selectedObjectId}
-        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:text-zinc-500 rounded text-sm font-medium transition-colors"
+        className="px-2 md:px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:text-zinc-500 rounded text-sm font-medium transition-colors whitespace-nowrap"
         title="Delete Selected (Del)"
       >
-        Delete
+        <span className="hidden sm:inline">Delete</span>
+        <span className="sm:hidden">Del</span>
       </button>
 
       <div className="w-px h-8 bg-zinc-600 mx-1" />
@@ -263,34 +320,39 @@ export default function Toolbar({
       <button
         onClick={handleUndo}
         disabled={historyIndex <= 0}
-        className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 rounded text-sm font-medium transition-colors"
+        className="px-2 md:px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 rounded text-sm font-medium transition-colors whitespace-nowrap"
         title="Undo (Ctrl+Z)"
       >
-        ↶ Undo
+        <span className="hidden sm:inline">↶ Undo</span>
+        <span className="sm:hidden">↶</span>
       </button>
       <button
         onClick={handleRedo}
         disabled={historyIndex >= historyLength - 1}
-        className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 rounded text-sm font-medium transition-colors"
+        className="px-2 md:px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 rounded text-sm font-medium transition-colors whitespace-nowrap"
         title="Redo (Ctrl+Shift+Z)"
       >
-        ↷ Redo
+        <span className="hidden sm:inline">↷ Redo</span>
+        <span className="sm:hidden">↷</span>
       </button>
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-4" />
 
       {/* Export and Clear */}
       <button
         onClick={handleClear}
-        className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm font-medium transition-colors"
+        className="px-2 md:px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm font-medium transition-colors whitespace-nowrap hidden sm:block"
+        title="Clear Scene"
       >
         Clear Scene
       </button>
       <button
         onClick={onExport}
-        className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition-colors"
+        className="px-3 md:px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition-colors whitespace-nowrap"
+        title="Export Code"
       >
-        Export Code
+        <span className="hidden sm:inline">Export Code</span>
+        <span className="sm:hidden">Export</span>
       </button>
     </div>
   );
