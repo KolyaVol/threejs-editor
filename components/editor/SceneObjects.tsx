@@ -1,11 +1,23 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { selectObject } from '@/lib/store/editorSlice';
 import { useGLTF } from '@react-three/drei';
 import { createMaterialFromConfig } from '@/lib/utils/sceneHelpers';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
+
+// Setup Three.js texture loader to use correct base path
+if (typeof window !== 'undefined') {
+  THREE.DefaultLoadingManager.setURLModifier((url) => {
+    // If the URL is relative and contains Textures/, make it absolute
+    if (url.includes('Textures/') && !url.startsWith('http') && !url.startsWith('/')) {
+      return `/assets/models/house/${url}`;
+    }
+    return url;
+  });
+}
 
 function SceneObject({ object }: { object: any }) {
   const dispatch = useAppDispatch();
@@ -25,8 +37,46 @@ function SceneObject({ object }: { object: any }) {
   // Handle different object types
   if (object.type === 'model' && object.modelPath) {
     try {
+      // Load the GLTF model
       const gltf = useGLTF(object.modelPath) as any;
-      const clonedScene = gltf.scene.clone();
+      const clonedScene = gltf.scene.clone(true);
+      
+      // Get the base path for textures
+      const modelDir = object.modelPath.substring(0, object.modelPath.lastIndexOf('/'));
+      
+      // Fix texture paths and handle materials
+      clonedScene.traverse((child: any) => {
+        if (child.isMesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          
+          materials.forEach((mat: any) => {
+            // Handle texture maps
+            ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'].forEach((mapType) => {
+              if (mat[mapType]) {
+                const texture = mat[mapType];
+                // Ensure texture has proper settings (Three.js r152+ uses colorSpace instead of encoding)
+                if (mapType === 'map' || mapType === 'emissiveMap') {
+                  texture.colorSpace = 'srgb'; // For color textures
+                } else {
+                  texture.colorSpace = 'srgb-linear'; // For data textures
+                }
+                texture.flipY = false;
+                
+                // If texture failed to load, use fallback color
+                if (!texture.image || texture.image.width === 0) {
+                  console.warn(`Texture not loaded for ${mapType}, using fallback color`);
+                  mat[mapType] = null;
+                  if (!mat.color) {
+                    mat.color = new THREE.Color('#cccccc');
+                  }
+                }
+              }
+            });
+            
+            mat.needsUpdate = true;
+          });
+        }
+      });
       
       return (
         <primitive
@@ -39,7 +89,7 @@ function SceneObject({ object }: { object: any }) {
         />
       );
     } catch (error) {
-      console.error('Error loading model:', error);
+      console.error('Error loading model:', object.modelPath, error);
       return null;
     }
   }

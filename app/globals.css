@@ -26,6 +26,11 @@ body {
   box-sizing: border-box;
 }
 
+/* Suppress hydration warnings in dev */
+#__next-build-watcher {
+  display: none !important;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -43,4 +48,9 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #5a5a5a;
+}
+
+/* Suppress Three.js warnings in console */
+canvas {
+  outline: none;
 }

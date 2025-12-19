@@ -18,6 +18,12 @@ export default function EditorPage() {
   const [showHelp, setShowHelp] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  
+  // Panel collapsed states
+  const [hierarchyCollapsed, setHierarchyCollapsed] = useState(false);
+  const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
+  const [materialsCollapsed, setMaterialsCollapsed] = useState(false);
+  const [modelsCollapsed, setModelsCollapsed] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -65,18 +71,61 @@ export default function EditorPage() {
   return (
     <div className="w-screen h-screen flex flex-col bg-zinc-900 text-white">
       {/* Toolbar */}
-      <Toolbar onExport={() => setShowExportModal(true)} />
+      <Toolbar 
+        onExport={() => setShowExportModal(true)}
+        hierarchyCollapsed={hierarchyCollapsed}
+        propertiesCollapsed={propertiesCollapsed}
+        materialsCollapsed={materialsCollapsed}
+        modelsCollapsed={modelsCollapsed}
+        onExpandHierarchy={() => setHierarchyCollapsed(false)}
+        onExpandProperties={() => setPropertiesCollapsed(false)}
+        onExpandMaterials={() => setMaterialsCollapsed(false)}
+        onExpandModels={() => setModelsCollapsed(false)}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Panel - Scene Hierarchy */}
-        <div className={`${showLeftPanel ? 'block' : 'hidden lg:block'} transition-all`}>
-          <SceneHierarchy />
-        </div>
-
-        {/* Center - 3D Viewport */}
+        {/* Center - 3D Viewport - Full Width */}
         <div className="flex-1 relative">
           <EditorCanvas />
+
+          {/* Left Panel - Scene Hierarchy - Overlay */}
+          {!hierarchyCollapsed && (
+            <div className="absolute left-0 top-0 z-50 max-h-[calc(100vh-3.5rem)] overflow-hidden">
+              <SceneHierarchy 
+                isCollapsed={hierarchyCollapsed}
+                onToggleCollapse={() => setHierarchyCollapsed(!hierarchyCollapsed)}
+              />
+            </div>
+          )}
+
+          {/* Right Panels - Overlays */}
+          {!propertiesCollapsed && (
+            <div className="absolute right-0 top-0 z-50 max-h-[calc(100vh-3.5rem)] overflow-hidden">
+              <PropertiesPanel 
+                isCollapsed={propertiesCollapsed}
+                onToggleCollapse={() => setPropertiesCollapsed(!propertiesCollapsed)}
+              />
+            </div>
+          )}
+
+          {!materialsCollapsed && (
+            <div className={`absolute top-0 z-50 max-h-[calc(100vh-3.5rem)] overflow-hidden ${!propertiesCollapsed ? 'right-80' : 'right-0'}`}>
+              <MaterialLibrary 
+                isCollapsed={materialsCollapsed}
+                onToggleCollapse={() => setMaterialsCollapsed(!materialsCollapsed)}
+              />
+            </div>
+          )}
+
+          {!modelsCollapsed && (
+            <div className={`absolute top-0 z-50 max-h-[calc(100vh-3.5rem)] overflow-hidden ${!propertiesCollapsed && !materialsCollapsed ? 'right-[32rem]' : !propertiesCollapsed ? 'right-80' : !materialsCollapsed ? 'right-64' : 'right-0'}`}>
+              <ModelLibrary 
+                isCollapsed={modelsCollapsed}
+                onToggleCollapse={() => setModelsCollapsed(!modelsCollapsed)}
+              />
+            </div>
+          )}
           
           {/* Panel Toggle Buttons */}
           <div className="absolute top-4 left-4 flex gap-2">
@@ -99,23 +148,11 @@ export default function EditorPage() {
           {/* Help Button */}
           <button
             onClick={() => setShowHelp(!showHelp)}
-            className="absolute bottom-4 left-4 w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-full flex items-center justify-center text-xl transition-colors border border-zinc-600"
+            className="absolute bottom-4 left-4 w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-full flex items-center justify-center text-xl transition-colors border border-zinc-600 z-30"
             title="Keyboard Shortcuts (F1 or ?)"
           >
             ?
           </button>
-        </div>
-
-        {/* Right Panels Container */}
-        <div className={`${showRightPanel ? 'flex' : 'hidden lg:flex'} transition-all`}>
-          {/* Right Panel - Properties */}
-          <PropertiesPanel />
-
-          {/* Far Right - Materials and Models */}
-          <div className="hidden xl:flex">
-            <MaterialLibrary />
-            <ModelLibrary />
-          </div>
         </div>
       </div>
 

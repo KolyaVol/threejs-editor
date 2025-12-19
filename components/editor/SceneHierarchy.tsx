@@ -4,7 +4,12 @@ import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { selectObject, removeObject, duplicateObject, updateObjectWithHistory } from '@/lib/store/editorSlice';
 import { useState } from 'react';
 
-export default function SceneHierarchy() {
+interface SceneHierarchyProps {
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}
+
+export default function SceneHierarchy({ isCollapsed, onToggleCollapse }: SceneHierarchyProps) {
   const dispatch = useAppDispatch();
   const objects = useAppSelector((state) => state.editor.objects);
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
@@ -68,11 +73,18 @@ export default function SceneHierarchy() {
 
   return (
     <>
-      <div className="w-64 bg-zinc-800 border-r border-zinc-700 flex flex-col">
-        <div className="h-10 border-b border-zinc-700 flex items-center px-4">
+      <div className="w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl flex flex-col">
+        <div className="h-10 border-b border-zinc-700 flex items-center px-4 justify-between rounded-t-lg">
           <h2 className="text-sm font-semibold">Scene Hierarchy</h2>
+          <button
+            onClick={onToggleCollapse}
+            className="text-zinc-400 hover:text-white transition-colors text-xl"
+            title="Close"
+          >
+            ×
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-2">
+          <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-2">
           {objects.length === 0 ? (
             <div className="text-sm text-zinc-500 text-center mt-4">
               No objects in scene

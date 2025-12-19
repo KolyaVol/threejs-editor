@@ -4,7 +4,12 @@ import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { updateObjectWithHistory } from '@/lib/store/editorSlice';
 import { MaterialConfig } from '@/types/editor.types';
 
-export default function PropertiesPanel() {
+interface PropertiesPanelProps {
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}
+
+export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: PropertiesPanelProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const objects = useAppSelector((state) => state.editor.objects);
@@ -13,11 +18,18 @@ export default function PropertiesPanel() {
 
   if (!selectedObject) {
     return (
-      <div className="w-80 bg-zinc-800 border-l border-zinc-700 flex flex-col">
-        <div className="h-10 border-b border-zinc-700 flex items-center px-4">
+      <div className="w-80 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl flex flex-col">
+        <div className="h-10 border-b border-zinc-700 flex items-center px-4 justify-between rounded-t-lg">
           <h2 className="text-sm font-semibold">Properties</h2>
+          <button
+            onClick={onToggleCollapse}
+            className="text-zinc-400 hover:text-white transition-colors text-xl"
+            title="Close"
+          >
+            ×
+          </button>
         </div>
-        <div className="flex-1 flex items-center justify-center text-sm text-zinc-500">
+        <div className="p-8 flex items-center justify-center text-sm text-zinc-500">
           No object selected
         </div>
       </div>
@@ -51,11 +63,18 @@ export default function PropertiesPanel() {
   };
 
   return (
-    <div className="w-80 bg-zinc-800 border-l border-zinc-700 flex flex-col">
-      <div className="h-10 border-b border-zinc-700 flex items-center px-4">
+    <div className="w-80 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl flex flex-col">
+      <div className="h-10 border-b border-zinc-700 flex items-center px-4 justify-between rounded-t-lg">
         <h2 className="text-sm font-semibold">Properties</h2>
+        <button
+          onClick={onToggleCollapse}
+          className="text-zinc-400 hover:text-white transition-colors text-xl"
+          title="Close"
+        >
+          ×
+        </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-4 space-y-4">
         {/* Object Name */}
         <div>
           <label className="block text-xs font-semibold text-zinc-400 mb-1">Name</label>

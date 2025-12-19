@@ -5,7 +5,12 @@ import { updateObjectWithHistory } from '@/lib/store/editorSlice';
 import { materialPresets } from '@/lib/materials/materialPresets';
 import { useState } from 'react';
 
-export default function MaterialLibrary() {
+interface MaterialLibraryProps {
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}
+
+export default function MaterialLibrary({ isCollapsed, onToggleCollapse }: MaterialLibraryProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const objects = useAppSelector((state) => state.editor.objects);
@@ -36,9 +41,16 @@ export default function MaterialLibrary() {
   const filteredPresets = materialPresets.filter(preset => preset.category === activeCategory);
 
   return (
-    <div className="w-64 bg-zinc-800 border-l border-zinc-700 flex flex-col">
-      <div className="h-10 border-b border-zinc-700 flex items-center px-4">
+    <div className="w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl flex flex-col">
+      <div className="h-10 border-b border-zinc-700 flex items-center px-4 justify-between rounded-t-lg">
         <h2 className="text-sm font-semibold">Materials</h2>
+        <button
+          onClick={onToggleCollapse}
+          className="text-zinc-400 hover:text-white transition-colors text-xl"
+          title="Close"
+        >
+          ×
+        </button>
       </div>
 
       {/* Category Tabs */}
@@ -58,7 +70,7 @@ export default function MaterialLibrary() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-3">
         {!selectedObjectId || isLight ? (
           <div className="text-sm text-zinc-500 text-center mt-4">
             {isLight ? 'Lights do not have materials' : 'Select an object to apply materials'}

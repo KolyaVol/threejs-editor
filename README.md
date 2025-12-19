@@ -104,14 +104,11 @@ npm start
 
 ## Adding Custom Models
 
-1. Place your GLTF/GLB files in `public/assets/models/`
-2. Update the `ModelLibrary.tsx` component to include your models:
+1. Place your GLTF/GLB files in `public/assets/models/house/`
+2. Refresh the page - models are automatically loaded!
+3. All `.glb` and `.gltf` files from the house folder will appear in the Model Library panel
 
-```typescript
-const availableModels = ["/assets/models/your-model.glb", "/assets/models/another-model.glb"];
-```
-
-3. Your models will appear in the Model Library panel
+The editor automatically scans the `house` folder and loads all available models via an API route.
 
 ## Project Structure
 

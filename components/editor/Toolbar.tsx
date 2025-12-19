@@ -6,7 +6,29 @@ import { generateObjectId } from '@/lib/utils/sceneHelpers';
 import { SceneObject, TransformMode } from '@/types/editor.types';
 import { useState } from 'react';
 
-export default function Toolbar({ onExport }: { onExport: () => void }) {
+interface ToolbarProps {
+  onExport: () => void;
+  hierarchyCollapsed: boolean;
+  propertiesCollapsed: boolean;
+  materialsCollapsed: boolean;
+  modelsCollapsed: boolean;
+  onExpandHierarchy: () => void;
+  onExpandProperties: () => void;
+  onExpandMaterials: () => void;
+  onExpandModels: () => void;
+}
+
+export default function Toolbar({ 
+  onExport, 
+  hierarchyCollapsed,
+  propertiesCollapsed,
+  materialsCollapsed,
+  modelsCollapsed,
+  onExpandHierarchy,
+  onExpandProperties,
+  onExpandMaterials,
+  onExpandModels
+}: ToolbarProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const transformMode = useAppSelector((state) => state.editor.transformMode);
@@ -86,6 +108,52 @@ export default function Toolbar({ onExport }: { onExport: () => void }) {
 
   return (
     <div className="h-14 bg-zinc-800 border-b border-zinc-700 flex items-center px-4 gap-2">
+      {/* Collapsed Panel Buttons */}
+      {hierarchyCollapsed && (
+        <button
+          onClick={onExpandHierarchy}
+          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
+          title="Expand Scene Hierarchy"
+        >
+          <span>☰</span>
+          <span>Hierarchy</span>
+        </button>
+      )}
+      {propertiesCollapsed && (
+        <button
+          onClick={onExpandProperties}
+          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
+          title="Expand Properties"
+        >
+          <span>⚙</span>
+          <span>Properties</span>
+        </button>
+      )}
+      {materialsCollapsed && (
+        <button
+          onClick={onExpandMaterials}
+          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
+          title="Expand Materials"
+        >
+          <span>🎨</span>
+          <span>Materials</span>
+        </button>
+      )}
+      {modelsCollapsed && (
+        <button
+          onClick={onExpandModels}
+          className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm transition-colors flex items-center gap-2"
+          title="Expand Models"
+        >
+          <span>🏠</span>
+          <span>Models</span>
+        </button>
+      )}
+      
+      {(hierarchyCollapsed || propertiesCollapsed || materialsCollapsed || modelsCollapsed) && (
+        <div className="w-px h-8 bg-zinc-600 mx-1" />
+      )}
+
       {/* Add Primitive Dropdown */}
       <div className="relative">
         <button
