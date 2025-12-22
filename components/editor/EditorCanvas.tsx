@@ -1,28 +1,30 @@
-'use client';
+"use client";
 
-import { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, GizmoHelper, GizmoViewcube } from '@react-three/drei';
-import { useAppSelector } from '@/lib/store/hooks';
-import SceneObjects from './SceneObjects';
-import TransformControlsWrapper from './TransformControlsWrapper';
-import LoadingSpinner from '../ui/LoadingSpinner';
-import ErrorBoundary from '../ErrorBoundary';
+import { Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Grid, GizmoHelper, GizmoViewcube } from "@react-three/drei";
+import { useAppSelector } from "@/lib/store/hooks";
+import SceneObjects from "./SceneObjects";
+import TransformControlsWrapper from "./TransformControlsWrapper";
+import LoadingSpinner from "../ui/LoadingSpinner";
+import ErrorBoundary from "../ErrorBoundary";
 
 export default function EditorCanvas() {
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
 
   return (
-    <div 
-      className="w-full h-full bg-zinc-900"
-      onContextMenu={(e) => e.preventDefault()}
-    >
+    <div className="w-full h-full bg-zinc-900" onContextMenu={(e) => e.preventDefault()}>
       <ErrorBoundary>
         <Suspense fallback={<LoadingSpinner />}>
           <Canvas
             camera={{ position: [5, 5, 5], fov: 50 }}
             shadows
-            gl={{ preserveDrawingBuffer: true }}
+            gl={{
+              preserveDrawingBuffer: true,
+              alpha: false,
+              antialias: true,
+            }}
+            style={{ background: "#18181b" }}
           >
             {/* Lighting */}
             <ambientLight intensity={0.5} />
@@ -48,11 +50,13 @@ export default function EditorCanvas() {
               infiniteGrid
             />
 
-        {/* Scene Objects */}
-        <SceneObjects onRightClickObject={() => {
-          // This will be handled by parent component
-          window.dispatchEvent(new CustomEvent('openProperties'));
-        }} />
+            {/* Scene Objects */}
+            <SceneObjects
+              onRightClickObject={() => {
+                // This will be handled by parent component
+                window.dispatchEvent(new CustomEvent("openProperties"));
+              }}
+            />
 
             {/* Transform Controls for selected object */}
             {selectedObjectId && <TransformControlsWrapper />}
@@ -70,4 +74,3 @@ export default function EditorCanvas() {
     </div>
   );
 }
-

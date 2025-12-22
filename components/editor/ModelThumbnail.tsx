@@ -1,20 +1,35 @@
 'use client';
 
-import { Suspense, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Suspense, useRef, useEffect, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import ErrorBoundary from '../ErrorBoundary';
 
-function ModelPreview({ modelPath }: { modelPath: string }) {
+function ModelPreview({ modelPath, isHovered }: { modelPath: string; isHovered: boolean }) {
   const groupRef = useRef<THREE.Group>(null);
   const gltf = useGLTF(modelPath) as any;
+  const { invalidate } = useThree();
   
   useFrame(() => {
-    if (groupRef.current) {
+    if (groupRef.current && isHovered) {
       groupRef.current.rotation.y += 0.01;
+      // Invalidate to trigger next frame (needed for frameloop="demand")
+      invalidate();
     }
   });
+
+  useEffect(() => {
+    // Invalidate when model loads to trigger initial render
+    if (gltf?.scene) {
+      invalidate();
+    }
+  }, [gltf, invalidate]);
+
+  useEffect(() => {
+    // Invalidate when hover state changes to start/stop animation
+    invalidate();
+  }, [isHovered, invalidate]);
 
   if (!gltf?.scene) {
     return null;
@@ -43,9 +58,53 @@ function ThumbnailError() {
   );
 }
 
+function CanvasErrorFallback() {
+  // This component is rendered inside Canvas, so it must be a THREE object
+  // Return null or a valid THREE primitive
+  return null;
+}
+
 export default function ModelThumbnail({ modelPath }: { modelPath: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const glRendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const glContextRef = useRef<WebGLRenderingContext | WebGL2RenderingContext | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    // Cleanup function to dispose WebGL context when component unmounts
+    return () => {
+      // Dispose renderer first
+      if (glRendererRef.current) {
+        try {
+          glRendererRef.current.dispose();
+        } catch (error) {
+          // Renderer may already be disposed
+        }
+        glRendererRef.current = null;
+      }
+      
+      // Then dispose context
+      if (glContextRef.current) {
+        try {
+          const loseContext = glContextRef.current.getExtension('WEBGL_lose_context');
+          if (loseContext) {
+            loseContext.loseContext();
+          }
+        } catch (error) {
+          // Context may already be lost, ignore error
+        }
+        glContextRef.current = null;
+      }
+    };
+  }, []);
+
   return (
-    <div className="w-full h-full bg-zinc-900 rounded overflow-hidden relative">
+    <div 
+      ref={containerRef} 
+      className="w-full h-full bg-zinc-900 rounded overflow-hidden relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <ErrorBoundary fallback={<ThumbnailError />}>
         <Canvas
           camera={{ position: [0, 0, 2.5], fov: 50 }}
@@ -59,12 +118,23 @@ export default function ModelThumbnail({ modelPath }: { modelPath: string }) {
           }}
           dpr={[0.5, 1]} // Lower pixel ratio for thumbnails
           style={{ width: '100%', height: '100%' }}
-          frameloop="always"
+          frameloop="demand"
+          onCreated={({ gl }) => {
+            // Store renderer reference for cleanup
+            glRendererRef.current = gl;
+            
+            // Get the WebGL context from the renderer's DOM element
+            const canvas = gl.domElement;
+            const context = canvas.getContext('webgl') || canvas.getContext('webgl2');
+            if (context) {
+              glContextRef.current = context as WebGLRenderingContext | WebGL2RenderingContext;
+            }
+          }}
         >
           <ambientLight intensity={0.6} />
           <directionalLight position={[1, 1, 1]} intensity={0.8} />
-          <Suspense fallback={<ThumbnailError />}>
-            <ModelPreview modelPath={modelPath} />
+          <Suspense fallback={<CanvasErrorFallback />}>
+            <ModelPreview modelPath={modelPath} isHovered={isHovered} />
           </Suspense>
         </Canvas>
       </ErrorBoundary>
