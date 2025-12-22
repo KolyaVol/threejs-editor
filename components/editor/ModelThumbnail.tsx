@@ -16,6 +16,9 @@ function ModelPreview({ modelPath, isHovered }: { modelPath: string; isHovered: 
       groupRef.current.rotation.y += 0.01;
       // Invalidate to trigger next frame (needed for frameloop="demand")
       invalidate();
+    } else if (groupRef.current && !isHovered) {
+      // Reset to 45 degrees when not hovered
+      groupRef.current.rotation.y = Math.PI / 4;
     }
   });
 
@@ -46,6 +49,9 @@ function ModelPreview({ modelPath, isHovered }: { modelPath: string; isHovered: 
 
   clonedScene.scale.multiplyScalar(scale);
   clonedScene.position.sub(center.multiplyScalar(scale));
+  
+  // Rotate model by 45 degrees on Y axis for better preview angle
+  clonedScene.rotation.y = Math.PI / 4; // 45 degrees in radians
 
   return <primitive object={clonedScene} ref={groupRef} />;
 }

@@ -1,19 +1,29 @@
-'use client';
+"use client";
 
-import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
-import { selectObject, removeObject, duplicateObject, updateObjectWithHistory } from '@/lib/store/editorSlice';
-import { useState, memo } from 'react';
+import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
+import {
+  selectObject,
+  removeObject,
+  duplicateObject,
+  updateObjectWithHistory,
+} from "@/lib/store/editorSlice";
+import { useState, memo } from "react";
 
 interface SceneHierarchyProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleCollapse }: SceneHierarchyProps) {
+const SceneHierarchy = memo(function SceneHierarchy({
+  isCollapsed,
+  onToggleCollapse,
+}: SceneHierarchyProps) {
   const dispatch = useAppDispatch();
   const objects = useAppSelector((state) => state.editor.objects);
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; objectId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; objectId: string } | null>(
+    null
+  );
 
   const handleSelect = (id: string) => {
     dispatch(selectObject(id));
@@ -40,14 +50,16 @@ const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleColla
 
   const handleRename = () => {
     if (contextMenu) {
-      const object = objects.find(obj => obj.id === contextMenu.objectId);
+      const object = objects.find((obj) => obj.id === contextMenu.objectId);
       if (object) {
-        const newName = prompt('Enter new name:', object.name);
+        const newName = prompt("Enter new name:", object.name);
         if (newName && newName.trim()) {
-          dispatch(updateObjectWithHistory({
-            id: contextMenu.objectId,
-            updates: { name: newName.trim() }
-          }));
+          dispatch(
+            updateObjectWithHistory({
+              id: contextMenu.objectId,
+              updates: { name: newName.trim() },
+            })
+          );
         }
       }
       setContextMenu(null);
@@ -56,19 +68,19 @@ const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleColla
 
   const getObjectIcon = (type: string) => {
     const icons: Record<string, string> = {
-      box: '◻',
-      sphere: '●',
-      cylinder: '▢',
-      cone: '▲',
-      torus: '◯',
-      plane: '▭',
-      model: '🎨',
-      ambientLight: '☀',
-      directionalLight: '💡',
-      pointLight: '⚡',
-      spotLight: '🔦',
+      box: "◻",
+      sphere: "●",
+      cylinder: "▢",
+      cone: "▲",
+      torus: "◯",
+      plane: "▭",
+      model: "🎨",
+      ambientLight: "☀",
+      directionalLight: "💡",
+      pointLight: "⚡",
+      spotLight: "🔦",
     };
-    return icons[type] || '■';
+    return icons[type] || "■";
   };
 
   return (
@@ -84,11 +96,9 @@ const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleColla
             ×
           </button>
         </div>
-          <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-2">
+        <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-2">
           {objects.length === 0 ? (
-            <div className="text-sm text-zinc-500 text-center mt-4">
-              No objects in scene
-            </div>
+            <div className="text-sm text-zinc-500 text-center mt-4">No objects in scene</div>
           ) : (
             <div className="space-y-0.5">
               {objects.map((object) => (
@@ -98,8 +108,8 @@ const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleColla
                   onContextMenu={(e) => handleContextMenu(e, object.id)}
                   className={`px-3 py-2 rounded cursor-pointer text-sm flex items-center gap-2 transition-colors ${
                     selectedObjectId === object.id
-                      ? 'bg-blue-600 text-white'
-                      : 'hover:bg-zinc-700 text-zinc-300'
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-zinc-700 text-zinc-300"
                   }`}
                 >
                   <span className="text-base">{getObjectIcon(object.type)}</span>
@@ -111,17 +121,14 @@ const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleColla
           )}
         </div>
         <div className="h-8 border-t border-zinc-700 flex items-center px-4 text-xs text-zinc-500">
-          {objects.length} object{objects.length !== 1 ? 's' : ''}
+          {objects.length} object{objects.length !== 1 ? "s" : ""}
         </div>
       </div>
 
       {/* Context Menu */}
       {contextMenu && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setContextMenu(null)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
             className="fixed bg-zinc-700 rounded shadow-lg py-1 z-50 min-w-[150px]"
             style={{ left: contextMenu.x, top: contextMenu.y }}
@@ -153,4 +160,3 @@ const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleColla
 });
 
 export default SceneHierarchy;
-

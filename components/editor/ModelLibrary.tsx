@@ -4,7 +4,7 @@ import { useAppDispatch } from '@/lib/store/hooks';
 import { addObject } from '@/lib/store/editorSlice';
 import { generateObjectId } from '@/lib/utils/sceneHelpers';
 import { SceneObject } from '@/types/editor.types';
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useMemo, useRef } from 'react';
 import LazyModelThumbnail from './LazyModelThumbnail';
 
 interface ModelLibraryProps {
@@ -17,6 +17,9 @@ const ModelLibrary = memo(function ModelLibrary({ isCollapsed, onToggleCollapse 
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch all models from the house folder via API
   useEffect(() => {
@@ -41,6 +44,36 @@ const ModelLibrary = memo(function ModelLibrary({ isCollapsed, onToggleCollapse 
 
     fetchModels();
   }, []);
+
+  // Debounce search query with 0.5s delay
+  useEffect(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Filter models based on search query
+  const filteredModels = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return models;
+    }
+
+    const query = debouncedSearchQuery.toLowerCase().trim();
+    return models.filter((model) => {
+      const modelName = model.split('/').pop()?.replace('.glb', '').replace('.gltf', '') || '';
+      return modelName.toLowerCase().includes(query);
+    });
+  }, [models, debouncedSearchQuery]);
 
   const addModelToScene = (modelPath: string) => {
     try {
@@ -76,6 +109,17 @@ const ModelLibrary = memo(function ModelLibrary({ isCollapsed, onToggleCollapse 
         </button>
       </div>
 
+      {/* Search Input */}
+      <div className="p-3 border-b border-zinc-700">
+        <input
+          type="text"
+          placeholder="Search models..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-sm focus:outline-none focus:border-blue-500 text-white placeholder-zinc-500"
+        />
+      </div>
+
       <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-3">
         {loading ? (
           <div className="text-sm text-zinc-500 text-center mt-4">
@@ -88,17 +132,23 @@ const ModelLibrary = memo(function ModelLibrary({ isCollapsed, onToggleCollapse 
           <div className="text-sm text-red-400 text-center mt-4 px-2">
             <p className="mb-2">⚠️ {error}</p>
           </div>
-        ) : models.length === 0 ? (
+        ) : filteredModels.length === 0 ? (
           <div className="text-sm text-zinc-500 text-center mt-4 px-2">
-            <p className="mb-2">No models found</p>
-            <p className="text-xs">Add .glb or .gltf files to:</p>
-            <code className="text-xs bg-zinc-900 px-2 py-1 rounded block mt-2">
-              public/assets/models/house/
-            </code>
+            {debouncedSearchQuery ? (
+              <p className="mb-2">No models found matching "{debouncedSearchQuery}"</p>
+            ) : (
+              <>
+                <p className="mb-2">No models found</p>
+                <p className="text-xs">Add .glb or .gltf files to:</p>
+                <code className="text-xs bg-zinc-900 px-2 py-1 rounded block mt-2">
+                  public/assets/models/house/
+                </code>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {models.map((model) => {
+            {filteredModels.map((model) => {
               const modelName = model.split('/').pop()?.replace('.glb', '').replace('.gltf', '') || 'Model';
               return (
                 <button
@@ -126,7 +176,11 @@ const ModelLibrary = memo(function ModelLibrary({ isCollapsed, onToggleCollapse 
           📂 From: public/assets/models/house/
         </div>
         <div className="text-xs text-zinc-400">
-          {loading ? 'Loading...' : `${models.length} model${models.length !== 1 ? 's' : ''} available`}
+          {loading ? 'Loading...' : (
+            debouncedSearchQuery 
+              ? `${filteredModels.length} of ${models.length} model${models.length !== 1 ? 's' : ''}`
+              : `${models.length} model${models.length !== 1 ? 's' : ''} available`
+          )}
         </div>
       </div>
     </div>
