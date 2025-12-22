@@ -3,7 +3,7 @@
 import { useAppSelector, useAppDispatch, selectors } from '@/lib/store/hooks';
 import { updateObjectWithHistory } from '@/lib/store/editorSlice';
 import { MaterialConfig } from '@/types/editor.types';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 
 interface PropertiesPanelProps {
   isCollapsed: boolean;
@@ -37,6 +37,32 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
 
   const isLight = useMemo(() => selectedObject && ['ambientLight', 'directionalLight', 'pointLight', 'spotLight'].includes(selectedObject.type), [selectedObject]);
 
+  // Local state for number inputs (rotation, position, scale) to allow free typing
+  const [rotationInputs, setRotationInputs] = useState<[string, string, string]>(['', '', '']);
+  const [positionInputs, setPositionInputs] = useState<[string, string, string]>(['', '', '']);
+  const [scaleInputs, setScaleInputs] = useState<[string, string, string]>(['', '', '']);
+
+  // Sync local state when selectedObject changes
+  useEffect(() => {
+    if (selectedObject) {
+      setRotationInputs([
+        (selectedObject.rotation[0] * 180 / Math.PI).toFixed(1),
+        (selectedObject.rotation[1] * 180 / Math.PI).toFixed(1),
+        (selectedObject.rotation[2] * 180 / Math.PI).toFixed(1),
+      ]);
+      setPositionInputs([
+        selectedObject.position[0].toFixed(2),
+        selectedObject.position[1].toFixed(2),
+        selectedObject.position[2].toFixed(2),
+      ]);
+      setScaleInputs([
+        selectedObject.scale[0].toFixed(2),
+        selectedObject.scale[1].toFixed(2),
+        selectedObject.scale[2].toFixed(2),
+      ]);
+    }
+  }, [selectedObject?.id, selectedObject?.rotation, selectedObject?.position, selectedObject?.scale]);
+
   const updateProperty = useCallback((property: string, value: any) => {
     if (!selectedObjectId) return;
     dispatch(updateObjectWithHistory({
@@ -54,6 +80,76 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
       updates: { [axis]: newTransform as [number, number, number] }
     }));
   }, [dispatch, selectedObjectId, selectedObject]);
+
+  // Handle number input changes (updates local state only)
+  const handleRotationInputChange = useCallback((index: number, value: string) => {
+    const newInputs: [string, string, string] = [...rotationInputs];
+    newInputs[index] = value;
+    setRotationInputs(newInputs);
+  }, [rotationInputs]);
+
+  const handlePositionInputChange = useCallback((index: number, value: string) => {
+    const newInputs: [string, string, string] = [...positionInputs];
+    newInputs[index] = value;
+    setPositionInputs(newInputs);
+  }, [positionInputs]);
+
+  const handleScaleInputChange = useCallback((index: number, value: string) => {
+    const newInputs: [string, string, string] = [...scaleInputs];
+    newInputs[index] = value;
+    setScaleInputs(newInputs);
+  }, [scaleInputs]);
+
+  // Commit rotation value (on blur or Enter)
+  const commitRotation = useCallback((index: number) => {
+    const value = parseFloat(rotationInputs[index]);
+    if (!isNaN(value)) {
+      updateTransform('rotation', index, value * Math.PI / 180);
+    } else {
+      // Reset to current value if invalid
+      if (selectedObject) {
+        setRotationInputs([
+          (selectedObject.rotation[0] * 180 / Math.PI).toFixed(1),
+          (selectedObject.rotation[1] * 180 / Math.PI).toFixed(1),
+          (selectedObject.rotation[2] * 180 / Math.PI).toFixed(1),
+        ]);
+      }
+    }
+  }, [rotationInputs, updateTransform, selectedObject]);
+
+  // Commit position value (on blur or Enter)
+  const commitPosition = useCallback((index: number) => {
+    const value = parseFloat(positionInputs[index]);
+    if (!isNaN(value)) {
+      updateTransform('position', index, value);
+    } else {
+      // Reset to current value if invalid
+      if (selectedObject) {
+        setPositionInputs([
+          selectedObject.position[0].toFixed(2),
+          selectedObject.position[1].toFixed(2),
+          selectedObject.position[2].toFixed(2),
+        ]);
+      }
+    }
+  }, [positionInputs, updateTransform, selectedObject]);
+
+  // Commit scale value (on blur or Enter)
+  const commitScale = useCallback((index: number) => {
+    const value = parseFloat(scaleInputs[index]);
+    if (!isNaN(value)) {
+      updateTransform('scale', index, value);
+    } else {
+      // Reset to current value if invalid
+      if (selectedObject) {
+        setScaleInputs([
+          selectedObject.scale[0].toFixed(2),
+          selectedObject.scale[1].toFixed(2),
+          selectedObject.scale[2].toFixed(2),
+        ]);
+      }
+    }
+  }, [scaleInputs, updateTransform, selectedObject]);
 
   const updateMaterial = useCallback((property: keyof MaterialConfig, value: any) => {
     if (!selectedObjectId || !selectedObject?.material) return;
@@ -108,10 +204,15 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
               <div key={axis}>
                 <label className="block text-xs text-zinc-500 mb-1">{axis.toUpperCase()}</label>
                 <input
-                  type="number"
-                  step="0.1"
-                  value={selectedObject.position[index].toFixed(2)}
-                  onChange={(e) => updateTransform('position', index, parseFloat(e.target.value) || 0)}
+                  type="text"
+                  value={positionInputs[index]}
+                  onChange={(e) => handlePositionInputChange(index, e.target.value)}
+                  onBlur={() => commitPosition(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
                   className="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -127,10 +228,15 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
               <div key={axis}>
                 <label className="block text-xs text-zinc-500 mb-1">{axis.toUpperCase()}</label>
                 <input
-                  type="number"
-                  step="0.1"
-                  value={(selectedObject.rotation[index] * 180 / Math.PI).toFixed(1)}
-                  onChange={(e) => updateTransform('rotation', index, (parseFloat(e.target.value) || 0) * Math.PI / 180)}
+                  type="text"
+                  value={rotationInputs[index]}
+                  onChange={(e) => handleRotationInputChange(index, e.target.value)}
+                  onBlur={() => commitRotation(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
                   className="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -147,10 +253,15 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
               <div key={axis}>
                 <label className="block text-xs text-zinc-500 mb-1">{axis.toUpperCase()}</label>
                 <input
-                  type="number"
-                  step="0.1"
-                  value={selectedObject.scale[index].toFixed(2)}
-                  onChange={(e) => updateTransform('scale', index, parseFloat(e.target.value) || 0)}
+                  type="text"
+                  value={scaleInputs[index]}
+                  onChange={(e) => handleScaleInputChange(index, e.target.value)}
+                  onBlur={() => commitScale(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
                   className="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
