@@ -1,16 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { undo, redo, removeObject } from '@/lib/store/editorSlice';
 import EditorCanvas from '@/components/editor/EditorCanvas';
 import SceneHierarchy from '@/components/editor/SceneHierarchy';
 import PropertiesPanel from '@/components/editor/PropertiesPanel';
-import MaterialLibrary from '@/components/editor/MaterialLibrary';
-import ModelLibrary from '@/components/editor/ModelLibrary';
 import Toolbar from '@/components/editor/Toolbar';
-import ExportModal from '@/components/editor/ExportModal';
-import SettingsPanel from '@/components/editor/SettingsPanel';
+
+// Lazy load heavy components
+const MaterialLibrary = dynamic(() => import('@/components/editor/MaterialLibrary'), {
+  ssr: false,
+  loading: () => <div className="w-64 bg-zinc-800 border border-zinc-700 rounded-lg animate-pulse" />
+});
+
+const ModelLibrary = dynamic(() => import('@/components/editor/ModelLibrary'), {
+  ssr: false,
+  loading: () => <div className="w-64 bg-zinc-800 border border-zinc-700 rounded-lg animate-pulse" />
+});
+
+const ExportModal = dynamic(() => import('@/components/editor/ExportModal'), {
+  ssr: false,
+});
+
+const SettingsPanel = dynamic(() => import('@/components/editor/SettingsPanel'), {
+  ssr: false,
+});
 
 export default function EditorPage() {
   const dispatch = useAppDispatch();

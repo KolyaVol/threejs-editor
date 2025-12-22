@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, GizmoHelper, GizmoViewcube } from "@react-three/drei";
 import { useAppSelector } from "@/lib/store/hooks";
@@ -11,6 +11,11 @@ import ErrorBoundary from "../ErrorBoundary";
 
 export default function EditorCanvas() {
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
+
+  const handleRightClickObject = useCallback(() => {
+    // This will be handled by parent component
+    window.dispatchEvent(new CustomEvent("openProperties"));
+  }, []);
 
   return (
     <div className="w-full h-full bg-zinc-900" onContextMenu={(e) => e.preventDefault()}>
@@ -51,12 +56,7 @@ export default function EditorCanvas() {
             />
 
             {/* Scene Objects */}
-            <SceneObjects
-              onRightClickObject={() => {
-                // This will be handled by parent component
-                window.dispatchEvent(new CustomEvent("openProperties"));
-              }}
-            />
+            <SceneObjects onRightClickObject={handleRightClickObject} />
 
             {/* Transform Controls for selected object */}
             {selectedObjectId && <TransformControlsWrapper />}

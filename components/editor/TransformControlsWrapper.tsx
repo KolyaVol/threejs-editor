@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { TransformControls } from '@react-three/drei';
-import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
+import { useAppSelector, useAppDispatch, selectors } from '@/lib/store/hooks';
 import { updateObject, updateObjectWithHistory } from '@/lib/store/editorSlice';
 import * as THREE from 'three';
 
@@ -14,12 +14,10 @@ const snapToGrid = (value: number, snapSize: number): number => {
 export default function TransformControlsWrapper() {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
-  const transformMode = useAppSelector((state) => state.editor.transformMode);
-  const objects = useAppSelector((state) => state.editor.objects);
-  const settings = useAppSelector((state) => state.editor.settings);
+  const transformMode = useAppSelector(selectors.selectTransformMode);
+  const settings = useAppSelector(selectors.selectSettings);
+  const selectedObject = useAppSelector(selectors.selectSelectedObject);
   const transformRef = useRef<any>(null);
-
-  const selectedObject = objects.find(obj => obj.id === selectedObjectId);
 
   useEffect(() => {
     if (!transformRef.current) return;

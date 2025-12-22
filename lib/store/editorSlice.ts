@@ -1,5 +1,14 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
 import { EditorState, SceneObject, TransformMode, EditorSettings } from '@/types/editor.types';
+
+// Optimized deep clone function using structuredClone with fallback
+const deepClone = <T>(obj: T): T => {
+  if (typeof structuredClone !== 'undefined') {
+    return structuredClone(obj);
+  }
+  // Fallback for older browsers
+  return JSON.parse(JSON.stringify(obj)) as T;
+};
 
 const initialState: EditorState = {
   objects: [],
@@ -27,7 +36,7 @@ const editorSlice = createSlice({
       if (state.historyIndex < state.history.length - 1) {
         state.history = state.history.slice(0, state.historyIndex + 1);
       }
-      state.history.push(JSON.parse(JSON.stringify(state.objects)));
+      state.history.push(deepClone(current(state.objects)));
       if (state.history.length > MAX_HISTORY) {
         state.history.shift();
       } else {
@@ -44,7 +53,7 @@ const editorSlice = createSlice({
       if (state.historyIndex < state.history.length - 1) {
         state.history = state.history.slice(0, state.historyIndex + 1);
       }
-      state.history.push(JSON.parse(JSON.stringify(state.objects)));
+      state.history.push(deepClone(current(state.objects)));
       if (state.history.length > MAX_HISTORY) {
         state.history.shift();
       } else {
@@ -67,7 +76,7 @@ const editorSlice = createSlice({
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(JSON.parse(JSON.stringify(state.objects)));
+        state.history.push(deepClone(current(state.objects)));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {
@@ -87,14 +96,14 @@ const editorSlice = createSlice({
     undo: (state) => {
       if (state.historyIndex > 0) {
         state.historyIndex--;
-        state.objects = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+        state.objects = deepClone(state.history[state.historyIndex]);
       }
     },
     
     redo: (state) => {
       if (state.historyIndex < state.history.length - 1) {
         state.historyIndex++;
-        state.objects = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+        state.objects = deepClone(state.history[state.historyIndex]);
       }
     },
     
@@ -102,7 +111,7 @@ const editorSlice = createSlice({
       const object = state.objects.find(obj => obj.id === action.payload);
       if (object) {
         const newObject = {
-          ...JSON.parse(JSON.stringify(object)),
+          ...deepClone(object),
           id: `${Date.now()}-${Math.random()}`,
           name: `${object.name} Copy`,
           position: [object.position[0] + 1, object.position[1], object.position[2]] as [number, number, number],
@@ -113,7 +122,7 @@ const editorSlice = createSlice({
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(JSON.parse(JSON.stringify(state.objects)));
+        state.history.push(deepClone(current(state.objects)));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useRef, useEffect, useState } from 'react';
+import { Suspense, useRef, useEffect, useState, memo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -64,7 +64,7 @@ function CanvasErrorFallback() {
   return null;
 }
 
-export default function ModelThumbnail({ modelPath }: { modelPath: string }) {
+const ModelThumbnail = memo(function ModelThumbnail({ modelPath }: { modelPath: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const glRendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const glContextRef = useRef<WebGLRenderingContext | WebGL2RenderingContext | null>(null);
@@ -140,4 +140,6 @@ export default function ModelThumbnail({ modelPath }: { modelPath: string }) {
       </ErrorBoundary>
     </div>
   );
-}
+});
+
+export default ModelThumbnail;

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import ModelThumbnail from './ModelThumbnail';
 
 interface LazyModelThumbnailProps {
   modelPath: string;
 }
 
-export default function LazyModelThumbnail({ modelPath }: LazyModelThumbnailProps) {
+const LazyModelThumbnail = memo(function LazyModelThumbnail({ modelPath }: LazyModelThumbnailProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isInViewport, setIsInViewport] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,5 +68,7 @@ export default function LazyModelThumbnail({ modelPath }: LazyModelThumbnailProp
       )}
     </div>
   );
-}
+});
+
+export default LazyModelThumbnail;
 

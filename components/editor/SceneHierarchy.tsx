@@ -2,14 +2,14 @@
 
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { selectObject, removeObject, duplicateObject, updateObjectWithHistory } from '@/lib/store/editorSlice';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface SceneHierarchyProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-export default function SceneHierarchy({ isCollapsed, onToggleCollapse }: SceneHierarchyProps) {
+const SceneHierarchy = memo(function SceneHierarchy({ isCollapsed, onToggleCollapse }: SceneHierarchyProps) {
   const dispatch = useAppDispatch();
   const objects = useAppSelector((state) => state.editor.objects);
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
@@ -150,5 +150,7 @@ export default function SceneHierarchy({ isCollapsed, onToggleCollapse }: SceneH
       )}
     </>
   );
-}
+});
+
+export default SceneHierarchy;
 

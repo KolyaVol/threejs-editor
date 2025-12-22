@@ -1,8 +1,9 @@
 'use client';
 
-import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
+import { useAppSelector, useAppDispatch, selectors } from '@/lib/store/hooks';
 import { updateObjectWithHistory } from '@/lib/store/editorSlice';
 import { MaterialConfig } from '@/types/editor.types';
+import { useCallback, useMemo } from 'react';
 
 interface PropertiesPanelProps {
   isCollapsed: boolean;
@@ -12,9 +13,7 @@ interface PropertiesPanelProps {
 export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: PropertiesPanelProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
-  const objects = useAppSelector((state) => state.editor.objects);
-
-  const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+  const selectedObject = useAppSelector(selectors.selectSelectedObject);
 
   if (!selectedObject) {
     return (
@@ -36,31 +35,34 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
     );
   }
 
-  const isLight = ['ambientLight', 'directionalLight', 'pointLight', 'spotLight'].includes(selectedObject.type);
+  const isLight = useMemo(() => selectedObject && ['ambientLight', 'directionalLight', 'pointLight', 'spotLight'].includes(selectedObject.type), [selectedObject]);
 
-  const updateProperty = (property: string, value: any) => {
+  const updateProperty = useCallback((property: string, value: any) => {
+    if (!selectedObjectId) return;
     dispatch(updateObjectWithHistory({
-      id: selectedObjectId!,
+      id: selectedObjectId,
       updates: { [property]: value }
     }));
-  };
+  }, [dispatch, selectedObjectId]);
 
-  const updateTransform = (axis: 'position' | 'rotation' | 'scale', index: number, value: number) => {
+  const updateTransform = useCallback((axis: 'position' | 'rotation' | 'scale', index: number, value: number) => {
+    if (!selectedObjectId || !selectedObject) return;
     const newTransform = [...selectedObject[axis]];
     newTransform[index] = value;
     dispatch(updateObjectWithHistory({
-      id: selectedObjectId!,
+      id: selectedObjectId,
       updates: { [axis]: newTransform as [number, number, number] }
     }));
-  };
+  }, [dispatch, selectedObjectId, selectedObject]);
 
-  const updateMaterial = (property: keyof MaterialConfig, value: any) => {
-    const newMaterial = { ...selectedObject.material!, [property]: value };
+  const updateMaterial = useCallback((property: keyof MaterialConfig, value: any) => {
+    if (!selectedObjectId || !selectedObject?.material) return;
+    const newMaterial = { ...selectedObject.material, [property]: value };
     dispatch(updateObjectWithHistory({
-      id: selectedObjectId!,
+      id: selectedObjectId,
       updates: { material: newMaterial }
     }));
-  };
+  }, [dispatch, selectedObjectId, selectedObject]);
 
   return (
     <div className="w-80 bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl flex flex-col">

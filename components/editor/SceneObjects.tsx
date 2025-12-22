@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, memo, useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { selectObject } from '@/lib/store/editorSlice';
 import { useGLTF } from '@react-three/drei';
-import { createMaterialFromConfig } from '@/lib/utils/sceneHelpers';
+import { createMaterialFromConfig, getGeometry } from '@/lib/utils/sceneHelpers';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 
@@ -19,82 +19,105 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// Model cache - stores processed model scenes by path
+const modelCache = new Map<string, THREE.Object3D>();
+
+// Process textures on a model scene (only once per model)
+const processModelTextures = (scene: THREE.Object3D) => {
+  scene.traverse((child: any) => {
+    if (child.isMesh && child.material) {
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      
+      materials.forEach((mat: any) => {
+        // Handle texture maps
+        ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'].forEach((mapType) => {
+          if (mat[mapType]) {
+            const texture = mat[mapType];
+            // Ensure texture has proper settings (Three.js r152+ uses colorSpace instead of encoding)
+            if (mapType === 'map' || mapType === 'emissiveMap') {
+              texture.colorSpace = 'srgb'; // For color textures
+            } else {
+              texture.colorSpace = 'srgb-linear'; // For data textures
+            }
+            texture.flipY = false;
+            
+            // If texture failed to load, use fallback color
+            if (!texture.image || texture.image.width === 0) {
+              console.warn(`Texture not loaded for ${mapType}, using fallback color`);
+              mat[mapType] = null;
+              if (!mat.color) {
+                mat.color = new THREE.Color('#cccccc');
+              }
+            }
+          }
+        });
+        
+        mat.needsUpdate = true;
+      });
+    }
+  });
+};
+
 interface SceneObjectProps {
   object: any;
   onRightClick?: () => void;
 }
 
-function SceneObject({ object, onRightClick }: SceneObjectProps) {
+const SceneObject = memo(function SceneObject({ object, onRightClick }: SceneObjectProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const isSelected = selectedObjectId === object.id;
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+  const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     dispatch(selectObject(object.id));
-  };
+  }, [dispatch, object.id]);
 
-  const handleRightClick = (e: ThreeEvent<MouseEvent>) => {
+  const handleRightClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     e.nativeEvent.preventDefault();
     dispatch(selectObject(object.id));
     if (onRightClick) {
       onRightClick();
     }
-  };
+  }, [dispatch, object.id, onRightClick]);
 
-  // Create material
-  const material = object.material
-    ? createMaterialFromConfig(object.material)
-    : new THREE.MeshStandardMaterial({ color: '#888888' });
+  // Create material (memoized)
+  const material = useMemo(() => {
+    return object.material
+      ? createMaterialFromConfig(object.material)
+      : new THREE.MeshStandardMaterial({ color: '#888888' });
+  }, [object.material]);
 
   // Handle different object types
   if (object.type === 'model' && object.modelPath) {
     try {
       // Load the GLTF model
       const gltf = useGLTF(object.modelPath) as any;
-      const clonedScene = gltf.scene.clone(true);
       
-      // Get the base path for textures
-      const modelDir = object.modelPath.substring(0, object.modelPath.lastIndexOf('/'));
-      
-      // Fix texture paths and handle materials
-      clonedScene.traverse((child: any) => {
-        if (child.isMesh && child.material) {
-          const materials = Array.isArray(child.material) ? child.material : [child.material];
-          
-          materials.forEach((mat: any) => {
-            // Handle texture maps
-            ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'].forEach((mapType) => {
-              if (mat[mapType]) {
-                const texture = mat[mapType];
-                // Ensure texture has proper settings (Three.js r152+ uses colorSpace instead of encoding)
-                if (mapType === 'map' || mapType === 'emissiveMap') {
-                  texture.colorSpace = 'srgb'; // For color textures
-                } else {
-                  texture.colorSpace = 'srgb-linear'; // For data textures
-                }
-                texture.flipY = false;
-                
-                // If texture failed to load, use fallback color
-                if (!texture.image || texture.image.width === 0) {
-                  console.warn(`Texture not loaded for ${mapType}, using fallback color`);
-                  mat[mapType] = null;
-                  if (!mat.color) {
-                    mat.color = new THREE.Color('#cccccc');
-                  }
-                }
-              }
-            });
-            
-            mat.needsUpdate = true;
-          });
+      // Cache and process model scene (only once per model path)
+      const cachedScene = useMemo(() => {
+        if (modelCache.has(object.modelPath)) {
+          return modelCache.get(object.modelPath)!;
         }
-      });
+        
+        // Clone and process the scene
+        const clonedScene = gltf.scene.clone(true);
+        processModelTextures(clonedScene);
+        
+        // Cache the processed scene
+        modelCache.set(object.modelPath, clonedScene);
+        return clonedScene;
+      }, [object.modelPath, gltf.scene]);
+      
+      // Clone from cache for this instance
+      const instanceScene = useMemo(() => {
+        return cachedScene.clone(true);
+      }, [cachedScene]);
       
       return (
         <primitive
-          object={clonedScene}
+          object={instanceScene}
           position={object.position}
           rotation={object.rotation}
           scale={object.scale}
@@ -165,27 +188,44 @@ function SceneObject({ object, onRightClick }: SceneObjectProps) {
       receiveShadow
     >
       {object.type === 'box' && (
-        <boxGeometry args={object.geometryArgs || [1, 1, 1]} />
+        <primitive object={getGeometry('box', object.geometryArgs || [1, 1, 1])} attach="geometry" />
       )}
       {object.type === 'sphere' && (
-        <sphereGeometry args={object.geometryArgs || [1, 32, 32]} />
+        <primitive object={getGeometry('sphere', object.geometryArgs || [1, 32, 32])} attach="geometry" />
       )}
       {object.type === 'cylinder' && (
-        <cylinderGeometry args={object.geometryArgs || [1, 1, 2, 32]} />
+        <primitive object={getGeometry('cylinder', object.geometryArgs || [1, 1, 2, 32])} attach="geometry" />
       )}
       {object.type === 'plane' && (
-        <planeGeometry args={object.geometryArgs || [10, 10]} />
+        <primitive object={getGeometry('plane', object.geometryArgs || [10, 10])} attach="geometry" />
       )}
       {object.type === 'torus' && (
-        <torusGeometry args={object.geometryArgs || [1, 0.4, 16, 100]} />
+        <primitive object={getGeometry('torus', object.geometryArgs || [1, 0.4, 16, 100])} attach="geometry" />
       )}
       {object.type === 'cone' && (
-        <coneGeometry args={object.geometryArgs || [1, 2, 32]} />
+        <primitive object={getGeometry('cone', object.geometryArgs || [1, 2, 32])} attach="geometry" />
       )}
       <primitive object={material} attach="material" />
     </mesh>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if object properties change or onRightClick reference changes
+  return (
+    prevProps.object.id === nextProps.object.id &&
+    prevProps.object.position[0] === nextProps.object.position[0] &&
+    prevProps.object.position[1] === nextProps.object.position[1] &&
+    prevProps.object.position[2] === nextProps.object.position[2] &&
+    prevProps.object.rotation[0] === nextProps.object.rotation[0] &&
+    prevProps.object.rotation[1] === nextProps.object.rotation[1] &&
+    prevProps.object.rotation[2] === nextProps.object.rotation[2] &&
+    prevProps.object.scale[0] === nextProps.object.scale[0] &&
+    prevProps.object.scale[1] === nextProps.object.scale[1] &&
+    prevProps.object.scale[2] === nextProps.object.scale[2] &&
+    prevProps.object.visible === nextProps.object.visible &&
+    JSON.stringify(prevProps.object.material) === JSON.stringify(nextProps.object.material) &&
+    prevProps.onRightClick === nextProps.onRightClick
+  );
+});
 
 interface SceneObjectsProps {
   onRightClickObject?: () => void;
@@ -195,15 +235,15 @@ export default function SceneObjects({ onRightClickObject }: SceneObjectsProps) 
   const objects = useAppSelector((state) => state.editor.objects);
   const dispatch = useAppDispatch();
 
-  const handleCanvasClick = () => {
+  const handleCanvasClick = useCallback(() => {
     dispatch(selectObject(null));
-  };
+  }, [dispatch]);
 
-  const handleCanvasRightClick = (e: any) => {
+  const handleCanvasRightClick = useCallback((e: any) => {
     e.stopPropagation();
     // Prevent browser context menu on canvas
     e.nativeEvent?.preventDefault();
-  };
+  }, []);
 
   return (
     <group onClick={handleCanvasClick} onContextMenu={handleCanvasRightClick}>

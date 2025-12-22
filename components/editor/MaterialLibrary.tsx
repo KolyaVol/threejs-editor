@@ -1,22 +1,20 @@
 'use client';
 
-import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
+import { useAppSelector, useAppDispatch, selectors } from '@/lib/store/hooks';
 import { updateObjectWithHistory } from '@/lib/store/editorSlice';
 import { materialPresets } from '@/lib/materials/materialPresets';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface MaterialLibraryProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-export default function MaterialLibrary({ isCollapsed, onToggleCollapse }: MaterialLibraryProps) {
+const MaterialLibrary = memo(function MaterialLibrary({ isCollapsed, onToggleCollapse }: MaterialLibraryProps) {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
-  const objects = useAppSelector((state) => state.editor.objects);
+  const selectedObject = useAppSelector(selectors.selectSelectedObject);
   const [activeCategory, setActiveCategory] = useState<'basic' | 'metal' | 'plastic' | 'special'>('basic');
-
-  const selectedObject = objects.find(obj => obj.id === selectedObjectId);
   const isLight = selectedObject && ['ambientLight', 'directionalLight', 'pointLight', 'spotLight'].includes(selectedObject.type);
 
   const applyMaterial = (presetId: string) => {
@@ -102,5 +100,7 @@ export default function MaterialLibrary({ isCollapsed, onToggleCollapse }: Mater
       </div>
     </div>
   );
-}
+});
+
+export default MaterialLibrary;
 

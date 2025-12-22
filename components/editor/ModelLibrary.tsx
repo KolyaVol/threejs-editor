@@ -4,7 +4,7 @@ import { useAppDispatch } from '@/lib/store/hooks';
 import { addObject } from '@/lib/store/editorSlice';
 import { generateObjectId } from '@/lib/utils/sceneHelpers';
 import { SceneObject } from '@/types/editor.types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import LazyModelThumbnail from './LazyModelThumbnail';
 
 interface ModelLibraryProps {
@@ -12,7 +12,7 @@ interface ModelLibraryProps {
   onToggleCollapse: () => void;
 }
 
-export default function ModelLibrary({ isCollapsed, onToggleCollapse }: ModelLibraryProps) {
+const ModelLibrary = memo(function ModelLibrary({ isCollapsed, onToggleCollapse }: ModelLibraryProps) {
   const dispatch = useAppDispatch();
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,5 +131,7 @@ export default function ModelLibrary({ isCollapsed, onToggleCollapse }: ModelLib
       </div>
     </div>
   );
-}
+});
+
+export default ModelLibrary;
 
