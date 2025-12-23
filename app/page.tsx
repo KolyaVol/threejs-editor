@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
-import { undo, redo, removeObject } from '@/lib/store/editorSlice';
+import { undo, redo, removeObject, deleteGroup } from '@/lib/store/editorSlice';
 import EditorCanvas from '@/components/editor/EditorCanvas';
 import SceneHierarchy from '@/components/editor/SceneHierarchy';
 import PropertiesPanel from '@/components/editor/PropertiesPanel';
@@ -31,6 +31,7 @@ const SettingsPanel = dynamic(() => import('@/components/editor/SettingsPanel'),
 export default function EditorPage() {
   const dispatch = useAppDispatch();
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
+  const selectedGroupId = useAppSelector((state) => state.editor.selectedGroupId);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -74,9 +75,16 @@ export default function EditorPage() {
       }
 
       // Delete: Delete or Backspace
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectId) {
-        e.preventDefault();
-        dispatch(removeObject(selectedObjectId));
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedObjectId) {
+          e.preventDefault();
+          e.stopPropagation();
+          dispatch(removeObject(selectedObjectId));
+        } else if (selectedGroupId) {
+          e.preventDefault();
+          e.stopPropagation();
+          dispatch(deleteGroup(selectedGroupId));
+        }
       }
 
       // Help: ? or F1
@@ -94,7 +102,7 @@ export default function EditorPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dispatch, selectedObjectId, showHelp]);
+  }, [dispatch, selectedObjectId, selectedGroupId, showHelp]);
 
   return (
     <div className="w-screen h-screen flex flex-col bg-zinc-900 text-white">

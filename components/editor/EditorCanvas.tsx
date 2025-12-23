@@ -6,11 +6,13 @@ import { OrbitControls, Grid, GizmoHelper, GizmoViewcube } from "@react-three/dr
 import { useAppSelector } from "@/lib/store/hooks";
 import SceneObjects from "./SceneObjects";
 import TransformControlsWrapper from "./TransformControlsWrapper";
+import GroupTransformControls from "./GroupTransformControls";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import ErrorBoundary from "../ErrorBoundary";
 
 export default function EditorCanvas() {
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
+  const selectedGroupId = useAppSelector((state) => state.editor.selectedGroupId);
 
   const handleRightClickObject = useCallback(() => {
     // This will be handled by parent component
@@ -59,7 +61,10 @@ export default function EditorCanvas() {
             <SceneObjects onRightClickObject={handleRightClickObject} />
 
             {/* Transform Controls for selected object */}
-            {selectedObjectId && <TransformControlsWrapper />}
+            {selectedObjectId && !selectedGroupId && <TransformControlsWrapper />}
+            
+            {/* Transform Controls for selected group */}
+            {selectedGroupId && <GroupTransformControls />}
 
             {/* Camera Controls */}
             <OrbitControls makeDefault />

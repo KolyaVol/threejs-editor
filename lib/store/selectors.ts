@@ -68,3 +68,21 @@ export const selectHistoryState = createSelector(
   })
 );
 
+export const selectGroups = createSelector(
+  [selectEditorState],
+  (editor) => editor.groups
+);
+
+export const selectSelectedGroup = createSelector(
+  [selectGroups, (state: RootState) => state.editor.selectedGroupId],
+  (groups, selectedGroupId) => {
+    if (!selectedGroupId) return null;
+    return groups.find(g => g.id === selectedGroupId) || null;
+  }
+);
+
+export const selectObjectsInGroup = createSelector(
+  [selectObjects, (state: RootState, groupId: string) => groupId],
+  (objects, groupId) => objects.filter(obj => obj.groupId === groupId)
+);
+

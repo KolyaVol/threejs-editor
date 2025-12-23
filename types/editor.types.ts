@@ -23,6 +23,8 @@ export interface SceneObject {
   scale: [number, number, number];
   material?: MaterialConfig;
   visible: boolean;
+  locked?: boolean; // Prevent modification
+  groupId?: string; // Group ID for grouping objects
   modelPath?: string; // for imported models
   // Light specific properties
   intensity?: number;
@@ -32,6 +34,12 @@ export interface SceneObject {
   geometryArgs?: number[];
 }
 
+export interface ObjectGroup {
+  id: string;
+  name: string;
+  objectIds: string[];
+}
+
 export interface EditorSettings {
   snapToGrid: boolean;
   snapSize: number;
@@ -39,7 +47,10 @@ export interface EditorSettings {
 
 export interface EditorState {
   objects: SceneObject[];
+  groups: ObjectGroup[];
   selectedObjectId: string | null;
+  selectedObjectIds: string[]; // Multi-select support
+  selectedGroupId: string | null;
   transformMode: TransformMode;
   history: SceneObject[][];
   historyIndex: number;

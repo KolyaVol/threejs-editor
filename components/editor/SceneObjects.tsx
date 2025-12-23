@@ -3,7 +3,7 @@
 import { useEffect, memo, useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { selectObject } from '@/lib/store/editorSlice';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF, Outlines } from '@react-three/drei';
 import { createMaterialFromConfig, getGeometry } from '@/lib/utils/sceneHelpers';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
@@ -65,18 +65,24 @@ interface SceneObjectProps {
 
 const SceneObject = memo(function SceneObject({ object, onRightClick }: SceneObjectProps) {
   const dispatch = useAppDispatch();
-  const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
-  const isSelected = selectedObjectId === object.id;
+  const selectedObjectIds = useAppSelector((state) => state.editor.selectedObjectIds);
+  const isSelected = selectedObjectIds.includes(object.id);
 
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    dispatch(selectObject(object.id));
-  }, [dispatch, object.id]);
+    // Don't select if locked
+    if (!object.locked) {
+      const multiSelect = e.nativeEvent.shiftKey;
+      dispatch(selectObject({ id: object.id, multiSelect }));
+    }
+  }, [dispatch, object.id, object.locked]);
 
   const handleRightClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     e.nativeEvent.preventDefault();
-    dispatch(selectObject(object.id));
+    // Allow right-click even if locked (for context menu)
+    const multiSelect = e.nativeEvent.shiftKey;
+    dispatch(selectObject({ id: object.id, multiSelect }));
     if (onRightClick) {
       onRightClick();
     }
@@ -115,16 +121,25 @@ const SceneObject = memo(function SceneObject({ object, onRightClick }: SceneObj
         return cachedScene.clone(true);
       }, [cachedScene]);
       
+      // For models, add a simple visual indicator when selected
+      // Note: Outlines work best on individual meshes, so for complex models we use a wireframe box
       return (
-        <primitive
-          object={instanceScene}
+        <group
           position={object.position}
           rotation={object.rotation}
           scale={object.scale}
           visible={object.visible}
           onClick={handleClick}
           onContextMenu={handleRightClick}
-        />
+        >
+          <primitive object={instanceScene} />
+          {isSelected && (
+            <mesh>
+              <boxGeometry args={[2, 2, 2]} />
+              <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.5} />
+            </mesh>
+          )}
+        </group>
       );
     } catch (error) {
       console.error('Error loading model:', object.modelPath, error);
@@ -206,6 +221,7 @@ const SceneObject = memo(function SceneObject({ object, onRightClick }: SceneObj
         <primitive object={getGeometry('cone', object.geometryArgs || [1, 2, 32])} attach="geometry" />
       )}
       <primitive object={material} attach="material" />
+      {isSelected && <Outlines thickness={0.1} color="#3b82f6" />}
     </mesh>
   );
 }, (prevProps, nextProps) => {
@@ -236,7 +252,7 @@ export default function SceneObjects({ onRightClickObject }: SceneObjectsProps) 
   const dispatch = useAppDispatch();
 
   const handleCanvasClick = useCallback(() => {
-    dispatch(selectObject(null));
+    dispatch(selectObject({ id: null }));
   }, [dispatch]);
 
   const handleCanvasRightClick = useCallback((e: any) => {
