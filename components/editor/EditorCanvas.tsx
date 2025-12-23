@@ -3,7 +3,7 @@
 import { Suspense, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, GizmoHelper, GizmoViewcube } from "@react-three/drei";
-import { useAppSelector } from "@/lib/store/hooks";
+import { useAppSelector, selectors } from "@/lib/store/hooks";
 import SceneObjects from "./SceneObjects";
 import TransformControlsWrapper from "./TransformControlsWrapper";
 import GroupTransformControls from "./GroupTransformControls";
@@ -13,6 +13,7 @@ import ErrorBoundary from "../ErrorBoundary";
 export default function EditorCanvas() {
   const selectedObjectId = useAppSelector((state) => state.editor.selectedObjectId);
   const selectedGroupId = useAppSelector((state) => state.editor.selectedGroupId);
+  const settings = useAppSelector(selectors.selectSettings);
 
   const handleRightClickObject = useCallback(() => {
     // This will be handled by parent component
@@ -43,7 +44,7 @@ export default function EditorCanvas() {
               shadow-mapSize-height={2048}
             />
 
-            {/* Grid and helpers */}
+            {/* Grid - always visible for reference */}
             <Grid
               args={[20, 20]}
               cellSize={1}
@@ -62,7 +63,7 @@ export default function EditorCanvas() {
 
             {/* Transform Controls for selected object */}
             {selectedObjectId && !selectedGroupId && <TransformControlsWrapper />}
-            
+
             {/* Transform Controls for selected group */}
             {selectedGroupId && <GroupTransformControls />}
 

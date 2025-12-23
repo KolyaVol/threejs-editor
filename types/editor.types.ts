@@ -45,6 +45,8 @@ export interface EditorSettings {
   snapSize: number;
   snapRotation: boolean;
   rotationStep: number; // in degrees
+  snapScale: boolean;
+  scaleStep: number; // scale increment
 }
 
 export interface EditorState {

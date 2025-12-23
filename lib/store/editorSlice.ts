@@ -27,6 +27,8 @@ const initialState: EditorState = {
     snapSize: 0.5,
     snapRotation: false,
     rotationStep: 15, // degrees
+    snapScale: false,
+    scaleStep: 0.1, // scale increment
   },
 };
 
