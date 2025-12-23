@@ -25,6 +25,8 @@ const initialState: EditorState = {
   settings: {
     snapToGrid: true,
     snapSize: 0.5,
+    snapRotation: false,
+    rotationStep: 15, // degrees
   },
 };
 

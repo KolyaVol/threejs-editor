@@ -43,6 +43,8 @@ export interface ObjectGroup {
 export interface EditorSettings {
   snapToGrid: boolean;
   snapSize: number;
+  snapRotation: boolean;
+  rotationStep: number; // in degrees
 }
 
 export interface EditorState {
