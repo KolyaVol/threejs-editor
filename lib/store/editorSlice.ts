@@ -1,14 +1,31 @@
-import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
-import { EditorState, SceneObject, TransformMode, EditorSettings, ObjectGroup } from '@/types/editor.types';
-import { generateObjectId } from '@/lib/utils/sceneHelpers';
+import { createSlice, PayloadAction, current } from "@reduxjs/toolkit";
+import {
+  EditorState,
+  SceneObject,
+  TransformMode,
+  EditorSettings,
+  ObjectGroup,
+} from "@/types/editor.types";
+import { generateObjectId } from "@/lib/utils/sceneHelpers";
 
-// Optimized deep clone function using structuredClone with fallback
+// Deep clone function using JSON parse/stringify (more reliable for complex objects)
 const deepClone = <T>(obj: T): T => {
-  if (typeof structuredClone !== 'undefined') {
-    return structuredClone(obj);
+  try {
+    // Use JSON parse/stringify as it's more reliable for complex nested objects
+    return JSON.parse(JSON.stringify(obj)) as T;
+  } catch (error) {
+    // Fallback: try structuredClone if available
+    if (typeof structuredClone !== "undefined") {
+      try {
+        return structuredClone(obj);
+      } catch {
+        // If both fail, return a shallow copy as last resort
+        return Array.isArray(obj) ? ([...obj] as T) : ({ ...obj } as T);
+      }
+    }
+    // Last resort: shallow copy
+    return Array.isArray(obj) ? ([...obj] as T) : ({ ...obj } as T);
   }
-  // Fallback for older browsers
-  return JSON.parse(JSON.stringify(obj)) as T;
 };
 
 const initialState: EditorState = {
@@ -17,7 +34,7 @@ const initialState: EditorState = {
   selectedObjectId: null,
   selectedObjectIds: [],
   selectedGroupId: null,
-  transformMode: 'translate',
+  transformMode: "translate",
   history: [[]],
   historyIndex: 0,
   cameraPosition: [5, 5, 5],
@@ -35,7 +52,7 @@ const initialState: EditorState = {
 const MAX_HISTORY = 50;
 
 const editorSlice = createSlice({
-  name: 'editor',
+  name: "editor",
   initialState,
   reducers: {
     addObject: (state, action: PayloadAction<SceneObject>) => {
@@ -44,47 +61,60 @@ const editorSlice = createSlice({
       if (state.historyIndex < state.history.length - 1) {
         state.history = state.history.slice(0, state.historyIndex + 1);
       }
-      state.history.push(deepClone(current(state.objects)));
+      const plainObjects = current(state.objects);
+      state.history.push(deepClone(plainObjects));
       if (state.history.length > MAX_HISTORY) {
         state.history.shift();
       } else {
         state.historyIndex++;
       }
     },
-    
+
     removeObject: (state, action: PayloadAction<string>) => {
-      state.objects = state.objects.filter(obj => obj.id !== action.payload);
+      // Get plain value before modifying
+      const currentObjects = current(state.objects);
+      // Filter the plain array
+      const filteredObjects = currentObjects.filter((obj) => obj.id !== action.payload);
+
+      // Update state
+      state.objects = filteredObjects;
       if (state.selectedObjectId === action.payload) {
         state.selectedObjectId = null;
       }
+      // Also remove from selectedObjectIds if present
+      state.selectedObjectIds = state.selectedObjectIds.filter((id) => id !== action.payload);
       // Add to history
       if (state.historyIndex < state.history.length - 1) {
         state.history = state.history.slice(0, state.historyIndex + 1);
       }
-      state.history.push(deepClone(current(state.objects)));
+      state.history.push(deepClone(filteredObjects));
       if (state.history.length > MAX_HISTORY) {
         state.history.shift();
       } else {
         state.historyIndex++;
       }
     },
-    
+
     updateObject: (state, action: PayloadAction<{ id: string; updates: Partial<SceneObject> }>) => {
-      const object = state.objects.find(obj => obj.id === action.payload.id);
+      const object = state.objects.find((obj) => obj.id === action.payload.id);
       if (object) {
         Object.assign(object, action.payload.updates);
       }
     },
-    
-    updateObjectWithHistory: (state, action: PayloadAction<{ id: string; updates: Partial<SceneObject> }>) => {
-      const object = state.objects.find(obj => obj.id === action.payload.id);
+
+    updateObjectWithHistory: (
+      state,
+      action: PayloadAction<{ id: string; updates: Partial<SceneObject> }>
+    ) => {
+      const object = state.objects.find((obj) => obj.id === action.payload.id);
       if (object) {
         Object.assign(object, action.payload.updates);
         // Add to history
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(deepClone(current(state.objects)));
+        const plainObjects = current(state.objects);
+        state.history.push(deepClone(plainObjects));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {
@@ -92,10 +122,10 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     selectObject: (state, action: PayloadAction<{ id: string | null; multiSelect?: boolean }>) => {
       const { id, multiSelect } = action.payload;
-      
+
       if (multiSelect && id) {
         // Multi-select: toggle the object in the selection
         const index = state.selectedObjectIds.indexOf(id);
@@ -124,33 +154,39 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     setTransformMode: (state, action: PayloadAction<TransformMode>) => {
       state.transformMode = action.payload;
     },
-    
+
     undo: (state) => {
       if (state.historyIndex > 0) {
         state.historyIndex--;
-        state.objects = deepClone(state.history[state.historyIndex]);
+        const historyItem = current(state.history[state.historyIndex]);
+        state.objects = deepClone(historyItem);
       }
     },
-    
+
     redo: (state) => {
       if (state.historyIndex < state.history.length - 1) {
         state.historyIndex++;
-        state.objects = deepClone(state.history[state.historyIndex]);
+        const historyItem = current(state.history[state.historyIndex]);
+        state.objects = deepClone(historyItem);
       }
     },
-    
+
     duplicateObject: (state, action: PayloadAction<string>) => {
-      const object = state.objects.find(obj => obj.id === action.payload);
+      const object = state.objects.find((obj) => obj.id === action.payload);
       if (object) {
         const newObject = {
           ...deepClone(object),
           id: `${Date.now()}-${Math.random()}`,
           name: `${object.name} Copy`,
-          position: [object.position[0] + 1, object.position[1], object.position[2]] as [number, number, number],
+          position: [object.position[0] + 1, object.position[1], object.position[2]] as [
+            number,
+            number,
+            number
+          ],
         };
         state.objects.push(newObject);
         state.selectedObjectId = newObject.id;
@@ -158,7 +194,8 @@ const editorSlice = createSlice({
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(deepClone(current(state.objects)));
+        const plainObjects = current(state.objects);
+        state.history.push(deepClone(plainObjects));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {
@@ -166,15 +203,15 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     setCameraPosition: (state, action: PayloadAction<[number, number, number]>) => {
       state.cameraPosition = action.payload;
     },
-    
+
     setCameraTarget: (state, action: PayloadAction<[number, number, number]>) => {
       state.cameraTarget = action.payload;
     },
-    
+
     clearScene: (state) => {
       state.objects = [];
       state.groups = [];
@@ -183,21 +220,22 @@ const editorSlice = createSlice({
       state.history = [[]];
       state.historyIndex = 0;
     },
-    
+
     updateSettings: (state, action: PayloadAction<Partial<EditorSettings>>) => {
       state.settings = { ...state.settings, ...action.payload };
     },
-    
+
     // Lock/Unlock actions
     toggleLock: (state, action: PayloadAction<string>) => {
-      const object = state.objects.find(obj => obj.id === action.payload);
+      const object = state.objects.find((obj) => obj.id === action.payload);
       if (object) {
         object.locked = !object.locked;
         // Add to history
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(deepClone(current(state.objects)));
+        const plainObjects = current(state.objects);
+        state.history.push(deepClone(plainObjects));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {
@@ -205,7 +243,7 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     // Group management actions
     createGroup: (state, action: PayloadAction<{ name: string; objectIds: string[] }>) => {
       const groupId = generateObjectId();
@@ -215,15 +253,15 @@ const editorSlice = createSlice({
         objectIds: action.payload.objectIds,
       };
       state.groups.push(newGroup);
-      
+
       // Assign groupId to objects
-      action.payload.objectIds.forEach(objId => {
-        const obj = state.objects.find(o => o.id === objId);
+      action.payload.objectIds.forEach((objId) => {
+        const obj = state.objects.find((o) => o.id === objId);
         if (obj) {
           obj.groupId = groupId;
         }
       });
-      
+
       // Add to history
       if (state.historyIndex < state.history.length - 1) {
         state.history = state.history.slice(0, state.historyIndex + 1);
@@ -235,20 +273,21 @@ const editorSlice = createSlice({
         state.historyIndex++;
       }
     },
-    
+
     addToGroup: (state, action: PayloadAction<{ groupId: string; objectId: string }>) => {
-      const group = state.groups.find(g => g.id === action.payload.groupId);
-      const object = state.objects.find(obj => obj.id === action.payload.objectId);
-      
+      const group = state.groups.find((g) => g.id === action.payload.groupId);
+      const object = state.objects.find((obj) => obj.id === action.payload.objectId);
+
       if (group && object && !group.objectIds.includes(action.payload.objectId)) {
         group.objectIds.push(action.payload.objectId);
         object.groupId = action.payload.groupId;
-        
+
         // Add to history
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(deepClone(current(state.objects)));
+        const plainObjects = current(state.objects);
+        state.history.push(deepClone(plainObjects));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {
@@ -256,25 +295,26 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     removeFromGroup: (state, action: PayloadAction<string>) => {
-      const object = state.objects.find(obj => obj.id === action.payload);
+      const object = state.objects.find((obj) => obj.id === action.payload);
       if (object && object.groupId) {
-        const group = state.groups.find(g => g.id === object.groupId);
+        const group = state.groups.find((g) => g.id === object.groupId);
         if (group) {
-          group.objectIds = group.objectIds.filter(id => id !== action.payload);
+          group.objectIds = group.objectIds.filter((id) => id !== action.payload);
           object.groupId = undefined;
-          
+
           // Remove group if empty
           if (group.objectIds.length === 0) {
-            state.groups = state.groups.filter(g => g.id !== group.id);
+            state.groups = state.groups.filter((g) => g.id !== group.id);
           }
-          
+
           // Add to history
           if (state.historyIndex < state.history.length - 1) {
             state.history = state.history.slice(0, state.historyIndex + 1);
           }
-          state.history.push(deepClone(current(state.objects)));
+          const plainObjects = current(state.objects);
+          state.history.push(deepClone(plainObjects));
           if (state.history.length > MAX_HISTORY) {
             state.history.shift();
           } else {
@@ -283,26 +323,27 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     deleteGroup: (state, action: PayloadAction<string>) => {
-      const group = state.groups.find(g => g.id === action.payload);
+      const group = state.groups.find((g) => g.id === action.payload);
       if (group) {
         // Remove groupId from all objects in the group
-        group.objectIds.forEach(objId => {
-          const obj = state.objects.find(o => o.id === objId);
+        group.objectIds.forEach((objId) => {
+          const obj = state.objects.find((o) => o.id === objId);
           if (obj) {
             obj.groupId = undefined;
           }
         });
-        
+
         // Remove the group
-        state.groups = state.groups.filter(g => g.id !== action.payload);
-        
+        state.groups = state.groups.filter((g) => g.id !== action.payload);
+
         // Add to history
         if (state.historyIndex < state.history.length - 1) {
           state.history = state.history.slice(0, state.historyIndex + 1);
         }
-        state.history.push(deepClone(current(state.objects)));
+        const plainObjects = current(state.objects);
+        state.history.push(deepClone(plainObjects));
         if (state.history.length > MAX_HISTORY) {
           state.history.shift();
         } else {
@@ -310,34 +351,42 @@ const editorSlice = createSlice({
         }
       }
     },
-    
+
     updateGroup: (state, action: PayloadAction<{ id: string; name: string }>) => {
-      const group = state.groups.find(g => g.id === action.payload.id);
+      const group = state.groups.find((g) => g.id === action.payload.id);
       if (group) {
         group.name = action.payload.name;
       }
     },
-    
+
     selectGroup: (state, action: PayloadAction<string | null>) => {
       state.selectedGroupId = action.payload;
       if (action.payload) {
         state.selectedObjectId = null; // Clear object selection when selecting group
       }
     },
-    
-    updateGroupTransform: (state, action: PayloadAction<{ groupId: string; position?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }>) => {
-      const group = state.groups.find(g => g.id === action.payload.groupId);
+
+    updateGroupTransform: (
+      state,
+      action: PayloadAction<{
+        groupId: string;
+        position?: [number, number, number];
+        rotation?: [number, number, number];
+        scale?: [number, number, number];
+      }>
+    ) => {
+      const group = state.groups.find((g) => g.id === action.payload.groupId);
       if (!group) return;
-      
+
       // Get all objects in the group (excluding locked ones)
-      const groupObjects = state.objects.filter(obj => 
-        group.objectIds.includes(obj.id) && !obj.locked
+      const groupObjects = state.objects.filter(
+        (obj) => group.objectIds.includes(obj.id) && !obj.locked
       );
       if (groupObjects.length === 0) return;
-      
+
       // Calculate current group center
       const center: [number, number, number] = [0, 0, 0];
-      groupObjects.forEach(obj => {
+      groupObjects.forEach((obj) => {
         center[0] += obj.position[0];
         center[1] += obj.position[1];
         center[2] += obj.position[2];
@@ -345,9 +394,9 @@ const editorSlice = createSlice({
       center[0] /= groupObjects.length;
       center[1] /= groupObjects.length;
       center[2] /= groupObjects.length;
-      
+
       // Apply transform to all objects in group
-      groupObjects.forEach(obj => {
+      groupObjects.forEach((obj) => {
         if (action.payload.position) {
           const offset: [number, number, number] = [
             obj.position[0] - center[0],
@@ -367,24 +416,32 @@ const editorSlice = createSlice({
           obj.scale = action.payload.scale;
         }
       });
-      
+
       // Add to history only on mouse up (this is called from handleMouseUp)
       // For handleChange, we don't add to history
     },
-    
-    updateGroupTransformWithHistory: (state, action: PayloadAction<{ groupId: string; position?: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }>) => {
-      const group = state.groups.find(g => g.id === action.payload.groupId);
+
+    updateGroupTransformWithHistory: (
+      state,
+      action: PayloadAction<{
+        groupId: string;
+        position?: [number, number, number];
+        rotation?: [number, number, number];
+        scale?: [number, number, number];
+      }>
+    ) => {
+      const group = state.groups.find((g) => g.id === action.payload.groupId);
       if (!group) return;
-      
+
       // Get all objects in the group (excluding locked ones)
-      const groupObjects = state.objects.filter(obj => 
-        group.objectIds.includes(obj.id) && !obj.locked
+      const groupObjects = state.objects.filter(
+        (obj) => group.objectIds.includes(obj.id) && !obj.locked
       );
       if (groupObjects.length === 0) return;
-      
+
       // Calculate current group center
       const center: [number, number, number] = [0, 0, 0];
-      groupObjects.forEach(obj => {
+      groupObjects.forEach((obj) => {
         center[0] += obj.position[0];
         center[1] += obj.position[1];
         center[2] += obj.position[2];
@@ -392,9 +449,9 @@ const editorSlice = createSlice({
       center[0] /= groupObjects.length;
       center[1] /= groupObjects.length;
       center[2] /= groupObjects.length;
-      
+
       // Apply transform to all objects in group
-      groupObjects.forEach(obj => {
+      groupObjects.forEach((obj) => {
         if (action.payload.position) {
           const offset: [number, number, number] = [
             obj.position[0] - center[0],
@@ -414,7 +471,7 @@ const editorSlice = createSlice({
           obj.scale = action.payload.scale;
         }
       });
-      
+
       // Add to history
       if (state.historyIndex < state.history.length - 1) {
         state.history = state.history.slice(0, state.historyIndex + 1);
@@ -455,4 +512,3 @@ export const {
 } = editorSlice.actions;
 
 export default editorSlice.reducer;
-

@@ -1,10 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { TransformControls } from '@react-three/drei';
-import { useAppSelector, useAppDispatch, selectors } from '@/lib/store/hooks';
-import { updateObject, updateObjectWithHistory, updateGroupTransform, updateGroupTransformWithHistory } from '@/lib/store/editorSlice';
-import * as THREE from 'three';
+import { useEffect, useRef, useState, useMemo } from "react";
+import { TransformControls } from "@react-three/drei";
+import { useAppSelector, useAppDispatch, selectors } from "@/lib/store/hooks";
+import {
+  updateObject,
+  updateObjectWithHistory,
+  updateGroupTransform,
+  updateGroupTransformWithHistory,
+} from "@/lib/store/editorSlice";
+import * as THREE from "three";
 
 // Helper function to snap value to grid
 const snapToGrid = (value: number, snapSize: number): number => {
@@ -34,27 +39,30 @@ export default function TransformControlsWrapper() {
   const transformRef = useRef<any>(null);
   const [ctrlPressed, setCtrlPressed] = useState<boolean>(false);
   const [shiftPressed, setShiftPressed] = useState<boolean>(false);
-  
+
   // Check if object is locked or part of a selected group
   const isLocked = selectedObject?.locked || false;
   const isGroupSelected = selectedGroupId !== null;
-  
+
   // Check if selected object belongs to a group (even if group is not explicitly selected)
-  const objectGroup = selectedObject?.groupId 
-    ? groups.find(g => g.id === selectedObject.groupId)
+  const objectGroup = selectedObject?.groupId
+    ? groups.find((g) => g.id === selectedObject.groupId)
     : null;
-  
-  // Determine effective mode: 
+
+  // Determine effective mode:
   // Priority: Shift (scale) > Ctrl (rotate) > normal mode
   // Only override when in translate mode
-  let effectiveMode = transformMode;
-  if (transformMode === 'translate') {
-    if (shiftPressed) {
-      effectiveMode = 'scale';
-    } else if (ctrlPressed) {
-      effectiveMode = 'rotate';
+  // Memoize to prevent infinite loops
+  const effectiveMode = useMemo(() => {
+    if (transformMode === "translate") {
+      if (shiftPressed) {
+        return "scale";
+      } else if (ctrlPressed) {
+        return "rotate";
+      }
     }
-  }
+    return transformMode;
+  }, [transformMode, shiftPressed, ctrlPressed]);
 
   // Track Ctrl and Shift key state
   useEffect(() => {
@@ -63,29 +71,29 @@ export default function TransformControlsWrapper() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-      if (e.key === 'Control' || e.metaKey) {
+      if (e.key === "Control" || e.metaKey) {
         setCtrlPressed(true);
       }
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control' || e.metaKey) {
+      if (e.key === "Control" || e.metaKey) {
         setCtrlPressed(false);
       }
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -93,20 +101,20 @@ export default function TransformControlsWrapper() {
     if (!transformRef.current) return;
 
     const controls = transformRef.current;
-    
+
     // Update mode based on key state (Shift > Ctrl > normal)
-    if (transformMode === 'translate') {
+    if (transformMode === "translate") {
       if (shiftPressed) {
-        controls.setMode('scale');
+        controls.setMode("scale");
       } else if (ctrlPressed) {
-        controls.setMode('rotate');
+        controls.setMode("rotate");
       } else {
-        controls.setMode('translate');
+        controls.setMode("translate");
       }
     } else {
       controls.setMode(transformMode);
     }
-    
+
     const handleChange = () => {
       if (!controls.object || isLocked) return;
 
@@ -117,7 +125,7 @@ export default function TransformControlsWrapper() {
       ];
 
       // Apply snap to grid for position if enabled and in translate mode (and no modifier keys pressed)
-      if (settings.snapToGrid && transformMode === 'translate' && !ctrlPressed && !shiftPressed) {
+      if (settings.snapToGrid && transformMode === "translate" && !ctrlPressed && !shiftPressed) {
         position = [
           snapToGrid(position[0], settings.snapSize),
           snapToGrid(position[1], settings.snapSize),
@@ -132,9 +140,12 @@ export default function TransformControlsWrapper() {
         controls.object.rotation.y,
         controls.object.rotation.z,
       ];
-      
+
       // Apply rotation snapping if enabled and in rotate mode (or Ctrl is pressed)
-      if (settings.snapRotation && (transformMode === 'rotate' || (ctrlPressed && transformMode === 'translate'))) {
+      if (
+        settings.snapRotation &&
+        (transformMode === "rotate" || (ctrlPressed && transformMode === "translate"))
+      ) {
         rotation = [
           snapRotation(rotation[0], settings.rotationStep),
           snapRotation(rotation[1], settings.rotationStep),
@@ -149,9 +160,12 @@ export default function TransformControlsWrapper() {
         controls.object.scale.y,
         controls.object.scale.z,
       ];
-      
+
       // Apply scale snapping if enabled and in scale mode (or Shift is pressed)
-      if (settings.snapScale && (transformMode === 'scale' || (shiftPressed && transformMode === 'translate'))) {
+      if (
+        settings.snapScale &&
+        (transformMode === "scale" || (shiftPressed && transformMode === "translate"))
+      ) {
         scale = [
           snapScale(scale[0], settings.scaleStep),
           snapScale(scale[1], settings.scaleStep),
@@ -162,31 +176,37 @@ export default function TransformControlsWrapper() {
       }
 
       // Determine which transform to apply based on effective mode
-      const isRotating = effectiveMode === 'rotate';
-      const isScaling = effectiveMode === 'scale';
-      
+      const isRotating = effectiveMode === "rotate";
+      const isScaling = effectiveMode === "scale";
+
       // Handle group transform or single object transform
       if (isGroupSelected && selectedGroup) {
-        dispatch(updateGroupTransform({
-          groupId: selectedGroup.id,
-          position: effectiveMode === 'translate' ? position : undefined,
-          rotation: isRotating ? rotation : undefined,
-          scale: isScaling ? scale : undefined,
-        }));
+        dispatch(
+          updateGroupTransform({
+            groupId: selectedGroup.id,
+            position: effectiveMode === "translate" ? position : undefined,
+            rotation: isRotating ? rotation : undefined,
+            scale: isScaling ? scale : undefined,
+          })
+        );
       } else if (objectGroup && selectedObjectId) {
         // If selected object is in a group, apply transform to all objects in the group
-        dispatch(updateGroupTransform({
-          groupId: objectGroup.id,
-          position: effectiveMode === 'translate' ? position : undefined,
-          rotation: isRotating ? rotation : undefined,
-          scale: isScaling ? scale : undefined,
-        }));
+        dispatch(
+          updateGroupTransform({
+            groupId: objectGroup.id,
+            position: effectiveMode === "translate" ? position : undefined,
+            rotation: isRotating ? rotation : undefined,
+            scale: isScaling ? scale : undefined,
+          })
+        );
       } else if (selectedObjectId) {
         // Update without adding to history during drag
-        dispatch(updateObject({
-          id: selectedObjectId,
-          updates: { position, rotation, scale },
-        }));
+        dispatch(
+          updateObject({
+            id: selectedObjectId,
+            updates: { position, rotation, scale },
+          })
+        );
       }
     };
 
@@ -200,7 +220,7 @@ export default function TransformControlsWrapper() {
       ];
 
       // Apply snap to grid for position if enabled and in translate mode (and no modifier keys pressed)
-      if (settings.snapToGrid && transformMode === 'translate' && !ctrlPressed && !shiftPressed) {
+      if (settings.snapToGrid && transformMode === "translate" && !ctrlPressed && !shiftPressed) {
         position = [
           snapToGrid(position[0], settings.snapSize),
           snapToGrid(position[1], settings.snapSize),
@@ -215,9 +235,12 @@ export default function TransformControlsWrapper() {
         controls.object.rotation.y,
         controls.object.rotation.z,
       ];
-      
+
       // Apply rotation snapping if enabled and in rotate mode (or Ctrl is pressed)
-      if (settings.snapRotation && (transformMode === 'rotate' || (ctrlPressed && transformMode === 'translate'))) {
+      if (
+        settings.snapRotation &&
+        (transformMode === "rotate" || (ctrlPressed && transformMode === "translate"))
+      ) {
         rotation = [
           snapRotation(rotation[0], settings.rotationStep),
           snapRotation(rotation[1], settings.rotationStep),
@@ -232,9 +255,12 @@ export default function TransformControlsWrapper() {
         controls.object.scale.y,
         controls.object.scale.z,
       ];
-      
+
       // Apply scale snapping if enabled and in scale mode (or Shift is pressed)
-      if (settings.snapScale && (transformMode === 'scale' || (shiftPressed && transformMode === 'translate'))) {
+      if (
+        settings.snapScale &&
+        (transformMode === "scale" || (shiftPressed && transformMode === "translate"))
+      ) {
         scale = [
           snapScale(scale[0], settings.scaleStep),
           snapScale(scale[1], settings.scaleStep),
@@ -245,44 +271,64 @@ export default function TransformControlsWrapper() {
       }
 
       // Determine which transform to apply based on effective mode
-      const isRotating = effectiveMode === 'rotate';
-      const isScaling = effectiveMode === 'scale';
-      
+      const isRotating = effectiveMode === "rotate";
+      const isScaling = effectiveMode === "scale";
+
       // Handle group transform or single object transform
       if (isGroupSelected && selectedGroup) {
         // For groups, we need to update all objects in the group with history
         // This is handled by updateGroupTransformWithHistory
-        dispatch(updateGroupTransformWithHistory({
-          groupId: selectedGroup.id,
-          position: effectiveMode === 'translate' ? position : undefined,
-          rotation: isRotating ? rotation : undefined,
-          scale: isScaling ? scale : undefined,
-        }));
+        dispatch(
+          updateGroupTransformWithHistory({
+            groupId: selectedGroup.id,
+            position: effectiveMode === "translate" ? position : undefined,
+            rotation: isRotating ? rotation : undefined,
+            scale: isScaling ? scale : undefined,
+          })
+        );
       } else if (objectGroup && selectedObjectId) {
         // If selected object is in a group, apply transform to all objects in the group with history
-        dispatch(updateGroupTransformWithHistory({
-          groupId: objectGroup.id,
-          position: effectiveMode === 'translate' ? position : undefined,
-          rotation: isRotating ? rotation : undefined,
-          scale: isScaling ? scale : undefined,
-        }));
+        dispatch(
+          updateGroupTransformWithHistory({
+            groupId: objectGroup.id,
+            position: effectiveMode === "translate" ? position : undefined,
+            rotation: isRotating ? rotation : undefined,
+            scale: isScaling ? scale : undefined,
+          })
+        );
       } else if (selectedObjectId) {
         // Add to history on mouse up
-        dispatch(updateObjectWithHistory({
-          id: selectedObjectId,
-          updates: { position, rotation, scale },
-        }));
+        dispatch(
+          updateObjectWithHistory({
+            id: selectedObjectId,
+            updates: { position, rotation, scale },
+          })
+        );
       }
     };
 
-    controls.addEventListener('change', handleChange);
-    controls.addEventListener('mouseUp', handleMouseUp);
+    controls.addEventListener("change", handleChange);
+    controls.addEventListener("mouseUp", handleMouseUp);
 
     return () => {
-      controls.removeEventListener('change', handleChange);
-      controls.removeEventListener('mouseUp', handleMouseUp);
+      controls.removeEventListener("change", handleChange);
+      controls.removeEventListener("mouseUp", handleMouseUp);
     };
-  }, [selectedObjectId, selectedGroupId, isLocked, isGroupSelected, selectedGroup, objectGroup, dispatch, settings, transformMode, effectiveMode, ctrlPressed, shiftPressed]);
+  }, [
+    selectedObjectId,
+    selectedGroupId,
+    isLocked,
+    isGroupSelected,
+    selectedGroup,
+    objectGroup,
+    dispatch,
+    settings,
+    transformMode,
+    effectiveMode,
+    ctrlPressed,
+    shiftPressed,
+    selectedObject,
+  ]);
 
   // Don't show controls if locked or if group is explicitly selected (groups use GroupTransformControls)
   // But show controls if an object in a group is selected (we'll handle group transforms here)
@@ -298,4 +344,3 @@ export default function TransformControlsWrapper() {
     />
   );
 }
-

@@ -35,6 +35,11 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
   const [scaleInputs, setScaleInputs] = useState<[string, string, string]>(['', '', '']);
 
   // Sync local state when selectedObject changes
+  // Use stringified values to avoid infinite loops from array reference changes
+  const rotationKey = selectedObject ? `${selectedObject.rotation[0]},${selectedObject.rotation[1]},${selectedObject.rotation[2]}` : '';
+  const positionKey = selectedObject ? `${selectedObject.position[0]},${selectedObject.position[1]},${selectedObject.position[2]}` : '';
+  const scaleKey = selectedObject ? `${selectedObject.scale[0]},${selectedObject.scale[1]},${selectedObject.scale[2]}` : '';
+  
   useEffect(() => {
     if (selectedObject) {
       setRotationInputs([
@@ -53,7 +58,7 @@ export default function PropertiesPanel({ isCollapsed, onToggleCollapse }: Prope
         selectedObject.scale[2].toFixed(2),
       ]);
     }
-  }, [selectedObject?.id, selectedObject?.rotation, selectedObject?.position, selectedObject?.scale]);
+  }, [selectedObject?.id, rotationKey, positionKey, scaleKey]);
 
   const updateProperty = useCallback((property: string, value: any) => {
     if (!selectedObjectId) return;
